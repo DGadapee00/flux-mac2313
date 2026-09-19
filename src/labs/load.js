@@ -5,6 +5,9 @@ const loaders = {
   extrema: () => import('./extrema.js'),
   chain: () => import('./chain.js'),
   gradient: () => import('./gradient.js'),
+  riemann: () => import('./riemann.js'),
+  iterated: () => import('./iterated.js'),
+  dpolar: () => import('./dpolar.js'),
 };
 
 const cache = new Map();

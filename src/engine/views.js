@@ -7,6 +7,8 @@ import { PolarGridView } from '../scene/polarGrid.js';
 import { CurveView } from '../scene/curve.js';
 import { CritView } from '../scene/crits.js';
 import { SliceView } from '../scene/slices.js';
+import { RiemannView } from '../scene/riemann.js';
+import { RegionView } from '../scene/region.js';
 import { M } from '../scene/manim.js';
 
 /** Lazy view pool: a lab's first visit builds what it needs; exit hides, does not dispose. */
@@ -27,6 +29,8 @@ export function createViewPool(scene) {
     curve: () => once('curve', () => new CurveView(scene)),
     lift: () => once('lift', () => new CurveView(scene, { color: M.gold, tanColor: M.yellow, width: 3.4 })),
     slices: () => once('slices', () => new SliceView(scene)),
+    riemann: () => once('riemann', () => new RiemannView(scene)),
+    region: () => once('region', () => new RegionView(scene)),
     crits: () => once('crits', () => new CritView(scene)),
     hideAll() {
       made.surface?.setVisible(false);
@@ -38,6 +42,8 @@ export function createViewPool(scene) {
       made.curve?.setVisible(false);
       made.lift?.setVisible(false);
       made.slices?.setVisible(false);
+      made.riemann?.setVisible(false);
+      made.region?.setVisible(false);
       made.crits?.setVisible(false);
     },
   };

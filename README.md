@@ -21,7 +21,9 @@ Opens at http://localhost:5175/
 npm test    # math self-test (no browser) + the problem-bank check
 ```
 
-## Labs (Chapter 2)
+## Labs
+
+### Chapter 2
 
 | Lab | Hash | What it shows |
 |---|---|---|
@@ -32,7 +34,15 @@ npm test    # math self-test (no browser) + the problem-bank check
 | Chain rule | `#/ch2/chain` | $g=f\circ\gamma$, $g'=\nabla f\cdot\gamma'$; two-variable $h=f\circ g$ |
 | Gradient | `#/ch2/gradient` | $\nabla f$, $D_{\hat u}f$ by the dot product and by a difference quotient |
 
-Coming: Chapters 3–5.
+### Chapter 3
+
+| Lab | Hash | What it shows |
+|---|---|---|
+| Riemann | `#/ch3/riemann` | Double Riemann boxes vs Simpson vs a closed form |
+| Iterated | `#/ch3/iterated` | $\iint dy\,dx$ vs $dx\,dy$ (Fubini), type I / type II regions |
+| Polar | `#/ch3/dpolar` | Disk $D_R$: Jacobian $r$, polar vs Cartesian vs polar Riemann |
+
+Coming: Chapters 4–5.
 
 Practice (**P**) has generated problems for this unit. Progress stays in this browser.
 
@@ -40,4 +50,4 @@ Notation follows Merino: $(x,y)$, $\gamma(t)$, $D_u f$ with a unit vector, $\nab
 
 ## What the tests check
 
-Nothing is checked against itself. Analytic partials vs central differences; mixed $f_{xy}$ from $f$ vs $\partial_y f_x$ vs $\partial_x f_y$; $D_{\hat u} f$ vs the difference quotient; steepest-ascent angle vs a 720-step sweep; polar round-trip and $\hat r\perp\hat\theta$; arc length Simpson vs polyline (and a closed form when we have one); Hessian $D$ vs mixed partials from finite differences; chain-rule $g'$ vs a quotient of $g$ vs numeric $\nabla f\cdot\gamma'$; $h_s,h_t$ vs quotients of the composite; Fubini order swap; polar area (with the $r\,dr\,d\theta$ Jacobian) vs a Cartesian indicator. The problem bank is then run through each lab’s own `recompute`.
+Nothing is checked against itself. Analytic partials vs central differences; mixed $f_{xy}$ from $f$ vs $\partial_y f_x$ vs $\partial_x f_y$; $D_{\hat u} f$ vs the difference quotient; steepest-ascent angle vs a 720-step sweep; polar round-trip and $\hat r\perp\hat\theta$; arc length Simpson vs polyline (and a closed form when we have one); Hessian $D$ vs mixed partials from finite differences; chain-rule $g'$ vs a quotient of $g$ vs numeric $\nabla f\cdot\gamma'$; $h_s,h_t$ vs quotients of the composite; Riemann sum vs Simpson vs closed form; Fubini $dy\,dx$ vs $dx\,dy$; type I vs type II on a disk and a triangle; polar $\iint$ (with the $r\,dr\,d\theta$ Jacobian) vs Cartesian type I vs polar Riemann. The problem bank is then run through each lab’s own `recompute`.

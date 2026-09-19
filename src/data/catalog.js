@@ -25,8 +25,8 @@ export const EXAMS = [
     title: 'Double integrals',
     chapters: '3',
     date: 'Ch 3',
-    labs: [],
-    coming: ['Riemann sums', 'Iterated integrals', 'Polar'],
+    labs: ['riemann', 'iterated', 'dpolar'],
+    coming: [],
   },
   {
     id: 'ch4',
@@ -55,6 +55,9 @@ export const LAB_META = {
   extrema: { id: 'extrema', exam: 'ch2', title: 'Extrema' },
   chain: { id: 'chain', exam: 'ch2', title: 'Chain' },
   gradient: { id: 'gradient', exam: 'ch2', title: 'Gradient' },
+  riemann: { id: 'riemann', exam: 'ch3', title: 'Riemann' },
+  iterated: { id: 'iterated', exam: 'ch3', title: 'Iterated' },
+  dpolar: { id: 'dpolar', exam: 'ch3', title: 'Polar' },
 };
 
 export const CHAPTER_TITLES = {

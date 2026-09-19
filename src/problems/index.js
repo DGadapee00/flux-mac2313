@@ -4,8 +4,9 @@
 import ch2 from './bank/ch2.js';
 import ch2more from './bank/ch2more.js';
 import ch2pc from './bank/ch2pc.js';
+import ch3 from './bank/ch3.js';
 
-export const PROBLEMS = [...ch2, ...ch2more, ...ch2pc];
+export const PROBLEMS = [...ch2, ...ch2more, ...ch2pc, ...ch3];
 
 const byIdMap = new Map(PROBLEMS.map((p) => [p.id, p]));
 

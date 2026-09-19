@@ -7,13 +7,15 @@
  */
 import { add, sub, dot, cross, len, normalize, proj, det2, det3 } from './vec.js';
 import { dfdx, dfdy, d2fdx2, d2fdy2, d2fdxdy, gradNumeric, dirQuotient } from './ndiff.js';
-import { simpson, integral2, integralPolar } from './quadrature.js';
+import { simpson, integral2, integralPolar, integralTypeI, integralTypeII } from './quadrature.js';
 import { SURFACES, evalSurface } from './surfaces.js';
 import { directional, steepestAngle, steepestSweep, wrapPi, unitize, dirFromAngle } from './gradient.js';
 import { toPolar, toCart, rHat, thetaHat, wrapTau } from './polar.js';
 import { CURVES, evalCurve, polylineLength } from './curves.js';
 import { hessian, classify } from './extrema.js';
 import { chainAlong, gQuotient, chainMap, hQuotientS, hQuotientT, INNERS } from './chain.js';
+import { riemannRect, riemannPolar } from './riemann.js';
+import { closedRect, closedDisk, closedTriangle, diskTypeI, diskTypeII, triangleBounds } from './double.js';
 
 let failed = 0;
 let passed = 0;
@@ -307,6 +309,45 @@ console.log('chain rule');
   const hb = chainMap(SURFACES.xy, innB, 0.8, 0.9, { a: 1 });
   approx(hQuotientS(SURFACES.xy, innB, 0.8, 0.9, { a: 1 }), hb.hs, 2e-4, 'bilinear h_s quotient vs chain');
   approx(hQuotientT(SURFACES.xy, innB, 0.8, 0.9, { a: 1 }), hb.ht, 2e-4, 'bilinear h_t quotient vs chain');
+}
+
+console.log('double Riemann sums and regions');
+{
+  const f = (x, y) => x * x + y * y;
+  const mid = riemannRect(f, 0, 1, 0, 1, { nx: 16, ny: 16, sample: 'mid' });
+  approx(mid.sum, 2 / 3, 0.01, 'midpoint n=16 vs ∬(x²+y²)=2/3');
+  approx(closedRect('paraboloid', 0, 1, 0, 1, { a: 1, b: 1 }), 2 / 3, 1e-12, 'closed ∬(x²+y²) on [0,1]²');
+  const one = riemannRect(() => 1, 0, 1, 0, 2, { nx: 3, ny: 5, sample: 'll' });
+  approx(one.sum, 2, 1e-12, 'f=1 Riemann is the area');
+  const xy = riemannRect((x, y) => x * y, 0, 1, 0, 1, { nx: 1, ny: 1, sample: 'mid' });
+  approx(xy.sum, 0.25, 1e-12, 'midpoint n=1 is exact for xy');
+  const n2 = riemannRect(f, 0, 1, 0, 1, { nx: 2, ny: 2, sample: 'mid' });
+  approx(n2.sum, 0.625, 1e-12, 'n=2 midpoint of x²+y² on [0,1]²');
+
+  const dI = diskTypeI(1);
+  const dII = diskTypeII(1);
+  const areaI = integralTypeI(() => 1, dI.xa, dI.xb, dI.yLo, dI.yHi, { n: 80 });
+  const areaII = integralTypeII(() => 1, dII.ya, dII.yb, dII.xLo, dII.xHi, { n: 80 });
+  approx(areaI, Math.PI, 0.01, 'disk type I area');
+  approx(areaII, Math.PI, 0.01, 'disk type II area');
+  absApprox(areaI - areaII, 0, 0.005, 'disk type I vs type II');
+
+  const tri = triangleBounds();
+  approx(integralTypeI(() => 1, tri.xa, tri.xb, tri.yLo, tri.yHi, { n: 40 }), 0.5, 0.005, 'triangle area type I');
+  approx(integralTypeII(() => 1, tri.ya, tri.yb, tri.xLo, tri.xHi, { n: 40 }), 0.5, 0.005, 'triangle area type II');
+  approx(closedTriangle('xy'), 1 / 24, 1e-12, 'triangle ∬ xy = 1/24');
+  approx(closedTriangle('paraboloid'), 1 / 6, 1e-12, 'triangle ∬(x²+y²)=1/6');
+
+  const pol = integralPolar((r, th) => 1, 0, 1, 0, 2 * Math.PI, { n: 80 });
+  approx(pol, Math.PI, 2e-4, 'polar area with Jacobian');
+  const rpol = riemannPolar(() => 1, 1, { nr: 12, nth: 24, sample: 'mid' });
+  approx(rpol.sum, Math.PI, 0.03, 'polar Riemann area');
+  approx(closedDisk('paraboloid', 1, { a: 1, b: 1 }), Math.PI / 2, 1e-12, '∬(x²+y²) on unit disk = π/2');
+  const Ipara = integralPolar((r) => r * r, 0, 1, 0, 2 * Math.PI, { n: 80 });
+  approx(Ipara, Math.PI / 2, 2e-4, 'polar Simpson x²+y²');
+  approx(closedDisk('one', 2), 4 * Math.PI, 1e-12, 'area of D_2 = 4π');
+  approx(closedDisk('xy', 1), 0, 1e-12, '∬ xy on a disk is 0');
+  approx(closedDisk('gaussian', 1), Math.PI * (1 - Math.exp(-1)), 1e-12, 'gaussian disk closed form');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

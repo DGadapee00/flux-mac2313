@@ -119,6 +119,18 @@ export const SURFACES = {
       { x: 1, y: 1 },
     ],
   },
+  one: {
+    id: 'one',
+    name: 'Constant 1',
+    tex: () => '1',
+    f: () => 1,
+    fx: () => 0,
+    fy: () => 0,
+    fxx: () => 0,
+    fyy: () => 0,
+    fxy: () => 0,
+    critical: () => [],
+  },
   prod2: {
     id: 'prod2',
     name: 'x² y',

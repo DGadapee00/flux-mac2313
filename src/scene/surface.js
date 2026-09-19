@@ -41,7 +41,7 @@ export class SurfaceView {
     this.group.visible = v;
   }
 
-  sync({ f, xMin, xMax, yMin, yMax, probe, fP, show }) {
+  sync({ f, xMin, xMax, yMin, yMax, probe, fP, show, stem = true }) {
     const u = sceneScale();
     const pos = this.mesh.geometry.attributes.position;
     const col = this.mesh.geometry.attributes.color;
@@ -86,6 +86,6 @@ export class SurfaceView {
     const h = top.y - foot.y;
     this.stem.position.set(foot.x, Math.min(foot.y, top.y), foot.z);
     this.stem.scale.set(u, Math.max(1e-4, Math.abs(h)), u);
-    this.stem.visible = true;
+    this.stem.visible = stem !== false && show !== false;
   }
 }

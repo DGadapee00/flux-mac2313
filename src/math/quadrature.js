@@ -71,4 +71,29 @@ export function integralPolar(f, r0, r1, t0, t1, { n = 64 } = {}) {
   return integral2((r, th) => f(r, th) * r, r0, r1, t0, t1, { order: 'xy', n });
 }
 
+/**
+ * Type I: ∫_{xa}^{xb} ∫_{yLo(x)}^{yHi(x)} f(x,y) dy dx.
+ * Type II: ∫_{ya}^{yb} ∫_{xLo(y)}^{xHi(y)} f(x,y) dx dy.
+ * Independent loops — Fubini on a non-rectangle is a real second route.
+ */
+export function integralTypeI(f, xa, xb, yLo, yHi, { n = 64 } = {}) {
+  const inner = (x) => {
+    const lo = yLo(x);
+    const hi = yHi(x);
+    if (!(hi > lo)) return 0;
+    return compositeSimpson((y) => f(x, y), lo, hi, n);
+  };
+  return compositeSimpson(inner, xa, xb, n);
+}
+
+export function integralTypeII(f, ya, yb, xLo, xHi, { n = 64 } = {}) {
+  const inner = (y) => {
+    const lo = xLo(y);
+    const hi = xHi(y);
+    if (!(hi > lo)) return 0;
+    return compositeSimpson((x) => f(x, y), lo, hi, n);
+  };
+  return compositeSimpson(inner, ya, yb, n);
+}
+
 export { compositeSimpson };
