@@ -96,4 +96,86 @@ export function integralTypeII(f, ya, yb, xLo, xHi, { n = 64 } = {}) {
   return compositeSimpson(inner, ya, yb, n);
 }
 
+/**
+ * Triple integral on a box. `order: 'xyz'` is ∫_x ∫_y ∫_z f dz dy dx;
+ * `order: 'zyx'` swaps to ∫_z ∫_y ∫_x f dx dy dz — a real Fubini check.
+ */
+export function integral3(f, xa, xb, ya, yb, za, zb, { order = 'xyz', n = 16 } = {}) {
+  if (order === 'zyx') {
+    const inner = (z) => {
+      const mid = (y) => compositeSimpson((x) => f(x, y, z), xa, xb, n);
+      return compositeSimpson(mid, ya, yb, n);
+    };
+    return compositeSimpson(inner, za, zb, n);
+  }
+  const inner = (x) => {
+    const mid = (y) => compositeSimpson((z) => f(x, y, z), za, zb, n);
+    return compositeSimpson(mid, ya, yb, n);
+  };
+  return compositeSimpson(inner, xa, xb, n);
+}
+
+/**
+ * ∭ f r dr dθ dz over r∈[0,R], θ∈[0,2π), z∈[z0,z1]. Jacobian r is included here.
+ */
+export function integralCyl(f, R, z0, z1, { n = 24 } = {}) {
+  const g = (r, th, z) => f(r * Math.cos(th), r * Math.sin(th), z) * r;
+  const inner = (z) => {
+    const mid = (th) => compositeSimpson((r) => g(r, th, z), 0, R, n);
+    return compositeSimpson(mid, 0, 2 * Math.PI, n);
+  };
+  return compositeSimpson(inner, z0, z1, n);
+}
+
+/**
+ * The same cylinder in Cartesian: x∈[−R,R], y∈[−√(R²−x²), √(R²−x²)], z∈[z0,z1].
+ * No Jacobian r — a real second route against integralCyl.
+ */
+export function integralCylCart(f, R, z0, z1, { n = 24 } = {}) {
+  const inner = (x) => {
+    const yLim = Math.sqrt(Math.max(0, R * R - x * x));
+    if (yLim <= 0) return 0;
+    const mid = (y) => compositeSimpson((z) => f(x, y, z), z0, z1, n);
+    return compositeSimpson(mid, -yLim, yLim, n);
+  };
+  return compositeSimpson(inner, -R, R, n);
+}
+
+/**
+ * ∭ f ρ² sinφ dρ dφ dθ over ρ∈[0,R], φ∈[0,π], θ∈[0,2π). Jacobian included here.
+ * φ is the angle from the positive z-axis.
+ */
+export function integralSph(f, R, { n = 24 } = {}) {
+  const g = (rho, phi, th) => {
+    const s = Math.sin(phi);
+    const c = Math.cos(phi);
+    const x = rho * s * Math.cos(th);
+    const y = rho * s * Math.sin(th);
+    const z = rho * c;
+    return f(x, y, z) * rho * rho * s;
+  };
+  const inner = (th) => {
+    const mid = (phi) => compositeSimpson((rho) => g(rho, phi, th), 0, R, n);
+    return compositeSimpson(mid, 0, Math.PI, n);
+  };
+  return compositeSimpson(inner, 0, 2 * Math.PI, n);
+}
+
+/**
+ * The same ball in Cartesian: x²+y²+z² ≤ R², nested type-I style. No ρ² sin φ.
+ */
+export function integralSphCart(f, R, { n = 24 } = {}) {
+  const inner = (x) => {
+    const yLim0 = Math.sqrt(Math.max(0, R * R - x * x));
+    if (yLim0 <= 0) return 0;
+    const mid = (y) => {
+      const zLim = Math.sqrt(Math.max(0, R * R - x * x - y * y));
+      if (zLim <= 0) return 0;
+      return compositeSimpson((z) => f(x, y, z), -zLim, zLim, n);
+    };
+    return compositeSimpson(mid, -yLim0, yLim0, n);
+  };
+  return compositeSimpson(inner, -R, R, n);
+}
+
 export { compositeSimpson };

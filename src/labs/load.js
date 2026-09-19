@@ -1,4 +1,6 @@
 const loaders = {
+  limits: () => import('./limits.js'),
+  riemann1: () => import('./riemann1.js'),
   polar: () => import('./polar.js'),
   parametric: () => import('./parametric.js'),
   partials: () => import('./partials.js'),
@@ -11,6 +13,9 @@ const loaders = {
   r3: () => import('./r3.js'),
   space: () => import('./space.js'),
   partials3: () => import('./partials3.js'),
+  triple: () => import('./triple.js'),
+  cyl: () => import('./cyl.js'),
+  sph: () => import('./sph.js'),
 };
 
 const cache = new Map();

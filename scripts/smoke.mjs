@@ -56,7 +56,7 @@ if (g.lab !== 'gradient') mismatches.push({ name: 'lab', got: g.lab, exp: 'gradi
 if (!Number.isFinite(g.f)) mismatches.push({ name: 'f', got: g.f, exp: 'finite' });
 check('Du vs Dq', g.Du, g.Dq, 0.05);
 
-await go('#/ch1', null);
+await go('#/ch1/limits', 'limits');
 await page.waitForTimeout(300);
 await go('#/ch2/gradient', 'gradient');
 await page.goBack();

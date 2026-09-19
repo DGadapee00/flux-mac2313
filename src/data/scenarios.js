@@ -5,6 +5,21 @@ const DOMAIN = { xMin: -2, xMax: 2, yMin: -2, yMax: 2 };
 const PLANE = { xMin: -2.5, xMax: 2.5, yMin: -2.5, yMax: 2.5 };
 
 export const SCENARIOS = {
+  limits: [
+    { id: 'quad', name: 'x²', graphId: 'quad', x0: 0.6, h: 0.35, a: -2, b: 2, xMin: -2.5, xMax: 2.5, yMin: -0.4, yMax: 4.2 },
+    { id: 'line', name: '2x + 1', graphId: 'line', x0: 0.5, h: 0.4, a: -1.5, b: 1.5, xMin: -2, xMax: 2, yMin: -2.2, yMax: 4.2 },
+    { id: 'abs', name: '|x|  — not differentiable at 0', graphId: 'abs', x0: 0, h: 0.45, a: -2, b: 2, xMin: -2.5, xMax: 2.5, yMin: -0.3, yMax: 2.4 },
+    { id: 'cube', name: 'x³  — f′=0 is not enough', graphId: 'cube', x0: 0, h: 0.4, a: -1.4, b: 1.4, xMin: -1.8, xMax: 1.8, yMin: -2.2, yMax: 2.2 },
+    { id: 'hole', name: '(x²−1)/(x−1)  — hole at 1', graphId: 'hole', x0: 1, h: 0.35, a: -0.5, b: 2.5, xMin: -0.8, xMax: 2.8, yMin: -0.2, yMax: 3.6 },
+    { id: 'squeeze', name: 'x² sin(1/x)', graphId: 'squeeze', x0: 0, h: 0.25, a: -1, b: 1, xMin: -1.3, xMax: 1.3, yMin: -1.2, yMax: 1.2 },
+  ],
+  riemann1: [
+    { id: 'quad', name: 'x² on [0,1]', graphId: 'quad', a: 0, b: 1, n: 6, sample: 'mid', xMin: -0.2, xMax: 1.2, yMin: -0.2, yMax: 1.4 },
+    { id: 'line', name: '2x+1 on [0,2]', graphId: 'line', a: 0, b: 2, n: 6, sample: 'mid', xMin: -0.2, xMax: 2.2, yMin: -0.2, yMax: 5.4 },
+    { id: 'cube', name: 'x³ on [0,1]', graphId: 'cube', a: 0, b: 1, n: 6, sample: 'mid', xMin: -0.2, xMax: 1.2, yMin: -0.2, yMax: 1.4 },
+    { id: 'abs', name: '|x| on [0,1]', graphId: 'abs', a: 0, b: 1, n: 6, sample: 'mid', xMin: -0.2, xMax: 1.2, yMin: -0.2, yMax: 1.4 },
+    { id: 'semi', name: 'Semicircle  √(1−x²)', graphId: 'semi', a: -1, b: 1, n: 8, sample: 'mid', xMin: -1.3, xMax: 1.3, yMin: -0.2, yMax: 1.3 },
+  ],
   gradient: [
     { id: 'paraboloid', name: 'Paraboloid  x² + y²', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, probe: { x: 1, y: 0.6 }, theta: 0.4, ...DOMAIN },
     { id: 'saddle', name: 'Saddle  x² − y²', surfaceId: 'saddle', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.8, y: 0.5 }, theta: 0.7, ...DOMAIN },
@@ -85,6 +100,25 @@ export const SCENARIOS = {
     { id: 'prod', name: 'x² y z', fieldId: 'prod', probe: { x: 0.9, y: 0.6, z: 0.7 }, xMin: -2, xMax: 2, yMin: -2, yMax: 2 },
     { id: 'linear', name: '2x − y + 3z', fieldId: 'linear', params: { a: 2, b: -1, c: 3 }, probe: { x: 0.4, y: -0.3, z: 0.5 }, xMin: -2, xMax: 2, yMin: -2, yMax: 2 },
   ],
+  triple: [
+    { id: 'one', name: '1 on [0,1]³  — volume', fieldId: 'one', params: { a: 1, b: 1, c: 0 }, n: 4, xMin: 0, xMax: 1, yMin: 0, yMax: 1, zMin: 0, zMax: 1 },
+    { id: 'xyz', name: 'xyz on [0,1]³', fieldId: 'xyz', params: { a: 1, b: 1, c: 0 }, n: 4, xMin: 0, xMax: 1, yMin: 0, yMax: 1, zMin: 0, zMax: 1 },
+    { id: 'x', name: 'x on [0,2]×[0,1]×[0,1]', fieldId: 'xonly', params: { a: 1, b: 1, c: 0 }, n: 4, xMin: 0, xMax: 2, yMin: 0, yMax: 1, zMin: 0, zMax: 1 },
+    { id: 'bowl', name: 'x²+y²+z² on [0,1]³', fieldId: 'bowl', params: { a: 1, b: 1, c: 0 }, n: 4, xMin: 0, xMax: 1, yMin: 0, yMax: 1, zMin: 0, zMax: 1 },
+    { id: 'big', name: '1 on [0,2]³', fieldId: 'one', params: { a: 1, b: 1, c: 0 }, n: 4, xMin: 0, xMax: 2, yMin: 0, yMax: 2, zMin: 0, zMax: 2 },
+  ],
+  cyl: [
+    { id: 'vol', name: 'Volume, R=1, z∈[0,1]', fieldId: 'one', params: { a: 1, b: 1, c: 0 }, R: 1, z0: 0, z1: 1 },
+    { id: 'z', name: 'z on the cylinder', fieldId: 'zonly', params: { a: 1, b: 1, c: 0 }, R: 1, z0: 0, z1: 2 },
+    { id: 'tall', name: 'Volume, R=1.2, H=1.5', fieldId: 'one', params: { a: 1, b: 1, c: 0 }, R: 1.2, z0: 0, z1: 1.5 },
+    { id: 'r2', name: 'x²+y²+z² on the cylinder', fieldId: 'bowl', params: { a: 1, b: 1, c: 0 }, R: 1, z0: 0, z1: 1 },
+  ],
+  sph: [
+    { id: 'vol', name: 'Unit ball  (volume)', fieldId: 'one', params: { a: 1, b: 1, c: 0 }, R: 1 },
+    { id: 'r12', name: 'Ball of radius 1.2', fieldId: 'one', params: { a: 1, b: 1, c: 0 }, R: 1.2 },
+    { id: 'bowl', name: 'x²+y²+z² on the unit ball', fieldId: 'bowl', params: { a: 1, b: 1, c: 0 }, R: 1 },
+    { id: 'z', name: 'z on the ball  (odd → 0)', fieldId: 'zonly', params: { a: 1, b: 1, c: 0 }, R: 1 },
+  ],
   extrema: [
     { id: 'paraboloid', name: 'Paraboloid — one min', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.8, y: 0.5 }, ...DOMAIN },
     { id: 'saddle', name: 'Saddle', surfaceId: 'saddle', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.7, y: 0.4 }, ...DOMAIN },
@@ -117,6 +151,15 @@ export function applyScenario(labId, id, state) {
   if (sc.u) state.u = { x: sc.u.x, y: sc.u.y, z: sc.u.z };
   if (sc.v) state.v = { x: sc.v.x, y: sc.v.y, z: sc.v.z };
   if (sc.fieldId) state.fieldId = sc.fieldId;
+  if (sc.graphId) state.graphId = sc.graphId;
+  if (sc.a != null) state.a = sc.a;
+  if (sc.b != null) state.b = sc.b;
+  if (sc.x0 != null) state.x0 = sc.x0;
+  if (sc.h != null) state.h = sc.h;
+  if (sc.z0 != null) state.z0 = sc.z0;
+  if (sc.z1 != null) state.z1 = sc.z1;
+  if (sc.zMin != null) state.zMin = sc.zMin;
+  if (sc.zMax != null) state.zMax = sc.zMax;
   if (sc.xMin != null) state.xMin = sc.xMin;
   if (sc.xMax != null) state.xMax = sc.xMax;
   if (sc.yMin != null) state.yMin = sc.yMin;

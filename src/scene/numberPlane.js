@@ -112,6 +112,8 @@ export class NumberPlane {
     this.nameB.element.textContent = b;
     this.nameOff.element.textContent = off;
     this.nameOff.position.set(0, floor ? 5.2 : 0, floor ? 0 : 5.2);
+    this.off.visible = floor;
+    this.nameOff.visible = floor;
   }
 
   get visible() {

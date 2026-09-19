@@ -10,6 +10,9 @@ import { SliceView } from '../scene/slices.js';
 import { RiemannView } from '../scene/riemann.js';
 import { RegionView } from '../scene/region.js';
 import { SpaceArrowsView } from '../scene/spaceArrows.js';
+import { GraphBarsView } from '../scene/graphBars.js';
+import { TripleBoxesView } from '../scene/tripleBoxes.js';
+import { SolidView } from '../scene/solid.js';
 import { M } from '../scene/manim.js';
 
 /** Lazy view pool: a lab's first visit builds what it needs; exit hides, does not dispose. */
@@ -33,6 +36,9 @@ export function createViewPool(scene) {
     riemann: () => once('riemann', () => new RiemannView(scene)),
     region: () => once('region', () => new RegionView(scene)),
     spaceArrows: () => once('spaceArrows', () => new SpaceArrowsView(scene)),
+    graphBars: () => once('graphBars', () => new GraphBarsView(scene)),
+    tripleBoxes: () => once('tripleBoxes', () => new TripleBoxesView(scene)),
+    solid: () => once('solid', () => new SolidView(scene)),
     crits: () => once('crits', () => new CritView(scene)),
     hideAll() {
       made.surface?.setVisible(false);
@@ -47,6 +53,9 @@ export function createViewPool(scene) {
       made.riemann?.setVisible(false);
       made.region?.setVisible(false);
       made.spaceArrows?.setVisible(false);
+      made.graphBars?.setVisible(false);
+      made.tripleBoxes?.setVisible(false);
+      made.solid?.setVisible(false);
       made.crits?.setVisible(false);
     },
   };

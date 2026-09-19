@@ -7,14 +7,17 @@
  */
 import { add, sub, dot, cross, len, normalize, proj, det2, det3 } from './vec.js';
 import { dfdx, dfdy, d2fdx2, d2fdy2, d2fdxdy, gradNumeric, dirQuotient } from './ndiff.js';
-import { simpson, integral2, integralPolar, integralTypeI, integralTypeII } from './quadrature.js';
+import { simpson, integral2, integralPolar, integralTypeI, integralTypeII, integral3, integralCyl, integralCylCart, integralSph, integralSphCart } from './quadrature.js';
 import { SURFACES, evalSurface } from './surfaces.js';
 import { directional, steepestAngle, steepestSweep, wrapPi, unitize, dirFromAngle } from './gradient.js';
 import { toPolar, toCart, rHat, thetaHat, wrapTau } from './polar.js';
 import { CURVES, evalCurve, polylineLength } from './curves.js';
 import { hessian, classify } from './extrema.js';
 import { chainAlong, gQuotient, chainMap, hQuotientS, hQuotientT, INNERS } from './chain.js';
-import { riemannRect, riemannPolar } from './riemann.js';
+import { riemannRect, riemannPolar, riemann1d, riemann3 } from './riemann.js';
+import { GRAPHS, graphPolyline, graphSpeed } from './graphs1.js';
+import { df1, df1left, df1right } from './ndiff.js';
+import { closedBox, closedCyl, closedBall } from './triple.js';
 import { closedRect, closedDisk, closedTriangle, diskTypeI, diskTypeII, triangleBounds } from './double.js';
 import { polarizeDot, paraArea } from './r3.js';
 import { SPACE_CURVES, evalSpace, polylineLength3 } from './space.js';
@@ -407,6 +410,78 @@ console.log('partials in R³');
   absApprox(bowl.fx, 0, 0, 'bowl ∇f at origin, fx');
   absApprox(bowl.fy, 0, 0, 'bowl ∇f at origin, fy');
   absApprox(bowl.fz, 0, 0, 'bowl ∇f at origin, fz');
+}
+
+console.log('graphs and 1D calculus');
+{
+  const q = GRAPHS.quad;
+  approx(df1(q.f, 0.7), q.fp(0.7), 1e-6, 'x²: central quotient vs 2x');
+  approx(simpson(q.f, 0, 1), q.F(1) - q.F(0), 1e-6, 'x²: Simpson vs F(1)-F(0)=1/3');
+  const mid = riemann1d(q.f, 0, 1, { n: 4, sample: 'mid' });
+  approx(mid.sum, 0.328125, 1e-12, 'x² midpoint n=4');
+  const left = riemann1d(q.f, 0, 1, { n: 8, sample: 'left' });
+  const right = riemann1d(q.f, 0, 1, { n: 8, sample: 'right' });
+  ok(left.sum < simpson(q.f, 0, 1) && simpson(q.f, 0, 1) < right.sum, 'x² increasing: left < I < right');
+
+  const line = GRAPHS.line;
+  approx(line.F(2) - line.F(0), 6, 1e-12, '2x+1 on [0,2] = 6');
+  approx(riemann1d(line.f, 0, 2, { n: 4, sample: 'mid' }).sum, 6, 1e-12, 'linear midpoint is exact');
+  approx(simpson((x) => graphSpeed(line, x, 0, 1), 0, 1), Math.sqrt(5), 1e-6, 'graph length of 2x+1 on [0,1] = √5');
+  approx(graphPolyline(line, 0, 1, 20), Math.sqrt(5), 1e-12, 'polyline of a line is exact');
+
+  const abs = GRAPHS.abs;
+  approx(df1left(abs.f, 0), -1, 1e-8, '|x| left derivative at 0');
+  approx(df1right(abs.f, 0), 1, 1e-8, '|x| right derivative at 0');
+  ok(!Number.isFinite(abs.fp(0)), '|x| analytic f′ undefined at 0');
+  approx(abs.f(0), 0, 0, '|x| continuous at 0');
+
+  const cube = GRAPHS.cube;
+  absApprox(cube.fp(0), 0, 0, 'x³: f′(0)=0');
+  ok(cube.f(0.2) > 0 && cube.f(-0.2) < 0, 'x³ takes both signs near 0');
+
+  const hole = GRAPHS.hole;
+  ok(!Number.isFinite(hole.f(1)), 'hole: f(1) undefined');
+  approx(hole.f(1.001), 2.001, 1e-12, 'hole: f(1.001)=2.001');
+  approx(df1(hole.f, 1, 1e-4), 1, 2e-3, 'hole: difference quotient at 1 is 1');
+
+  const sq = GRAPHS.squeeze;
+  absApprox(sq.f(0), 0, 0, 'squeeze f(0)=0');
+  absApprox(sq.fp(0), 0, 0, 'squeeze f′(0)=0');
+  approx(df1(sq.f, 0, 1e-4), 0, 2e-3, 'squeeze central quotient at 0');
+
+  const semi = GRAPHS.semi;
+  approx(semi.F(1) - semi.F(-1), Math.PI / 2, 1e-12, 'semicircle area π/2');
+  approx(graphPolyline(semi, -1, 1, 800), Math.PI, 0.01, 'semicircle polyline vs π');
+}
+
+console.log('triple integrals');
+{
+  approx(closedBox('one', 0, 1, 0, 1, 0, 1), 1, 1e-12, 'unit cube volume');
+  approx(closedBox('xyz', 0, 1, 0, 1, 0, 1), 0.125, 1e-12, 'xyz on unit cube = 1/8');
+  approx(closedBox('xonly', 0, 2, 0, 1, 0, 1), 2, 1e-12, 'x on [0,2]×[0,1]×[0,1]');
+  const fn = (x, y, z) => x * y * z;
+  approx(integral3(fn, 0, 1, 0, 1, 0, 1, { order: 'xyz', n: 16 }), 0.125, 2e-4, 'xyz Simpson xyz-order');
+  approx(integral3(fn, 0, 1, 0, 1, 0, 1, { order: 'zyx', n: 16 }), 0.125, 2e-4, 'xyz Simpson zyx-order');
+  approx(riemann3(() => 1, 0, 1, 0, 1, 0, 1, { n: 4 }).sum, 1, 1e-12, 'f=1 midpoint is exact');
+  approx(closedBox('bowl', 0, 1, 0, 1, 0, 1), 1, 1e-12, 'x²+y²+z² on unit cube = 1');
+
+  approx(closedCyl('one', 1, 0, 1), Math.PI, 1e-12, 'unit cylinder volume');
+  approx(closedCyl('zonly', 1, 0, 2), 2 * Math.PI, 1e-12, '∭ z on R=1, z∈[0,2]');
+  const one = () => 1;
+  approx(integralCyl(one, 1, 0, 1, { n: 24 }), Math.PI, 2e-4, 'cyl Simpson f=1');
+  approx(integralCylCart(one, 1, 0, 1, { n: 24 }), Math.PI, 5e-3, 'cyl Cartesian f=1');
+  const zf = (x, y, z) => z;
+  approx(integralCyl(zf, 1, 0, 2, { n: 24 }), 2 * Math.PI, 2e-3, 'cyl Simpson z');
+  approx(integralCylCart(zf, 1, 0, 2, { n: 24 }), 2 * Math.PI, 1e-2, 'cyl Cartesian z');
+
+  approx(closedBall('one', 1), (4 / 3) * Math.PI, 1e-12, 'unit ball volume');
+  absApprox(closedBall('zonly', 1), 0, 0, '∭ z on a ball is 0');
+  approx(closedBall('bowl', 1), (4 / 5) * Math.PI, 1e-12, '∭ ρ² on unit ball = 4π/5');
+  approx(integralSph(one, 1, { n: 24 }), (4 / 3) * Math.PI, 2e-3, 'sph Simpson f=1');
+  approx(integralSphCart(one, 1, { n: 20 }), (4 / 3) * Math.PI, 1e-2, 'sph Cartesian f=1');
+  absApprox(integralSph(zf, 1, { n: 24 }), 0, 2e-3, 'sph Simpson z ≈ 0');
+  const bowl = (x, y, z) => x * x + y * y + z * z;
+  approx(integralSph(bowl, 1, { n: 24 }), (4 / 5) * Math.PI, 3e-3, 'sph Simpson ρ²');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

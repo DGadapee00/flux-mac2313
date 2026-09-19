@@ -7,8 +7,8 @@ export const EXAMS = [
     title: 'Preliminaries',
     chapters: '1',
     date: 'Ch 1',
-    labs: [],
-    coming: ['Limits & continuity', 'Riemann sums'],
+    labs: ['limits', 'riemann1'],
+    coming: [],
   },
   {
     id: 'ch2',
@@ -43,12 +43,14 @@ export const EXAMS = [
     title: 'Triple integrals',
     chapters: '5',
     date: 'Ch 5',
-    labs: [],
-    coming: ['Cylindrical', 'Spherical'],
+    labs: ['triple', 'cyl', 'sph'],
+    coming: [],
   },
 ];
 
 export const LAB_META = {
+  limits: { id: 'limits', exam: 'ch1', title: 'Limits' },
+  riemann1: { id: 'riemann1', exam: 'ch1', title: 'Riemann' },
   polar: { id: 'polar', exam: 'ch2', title: 'Polar' },
   parametric: { id: 'parametric', exam: 'ch2', title: 'Parametric' },
   partials: { id: 'partials', exam: 'ch2', title: 'Partials' },
@@ -61,6 +63,9 @@ export const LAB_META = {
   r3: { id: 'r3', exam: 'ch4', title: 'R³' },
   space: { id: 'space', exam: 'ch4', title: 'Space' },
   partials3: { id: 'partials3', exam: 'ch4', title: 'Partials' },
+  triple: { id: 'triple', exam: 'ch5', title: 'Triple' },
+  cyl: { id: 'cyl', exam: 'ch5', title: 'Cylindrical' },
+  sph: { id: 'sph', exam: 'ch5', title: 'Spherical' },
 };
 
 export const CHAPTER_TITLES = {

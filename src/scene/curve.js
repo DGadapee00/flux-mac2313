@@ -41,7 +41,11 @@ export class CurveView {
       for (let i = 0; i < N; i++) {
         const s = t0 + ((t1 - t0) * i) / (N - 1);
         const w = mathToWorld(x(s), y(s), height(s), u);
-        if (i) flat.push(px, py, pz, w.x, w.y, w.z);
+        if (!Number.isFinite(w.x) || !Number.isFinite(w.y) || !Number.isFinite(w.z)) {
+          px = undefined;
+          continue;
+        }
+        if (i && px !== undefined) flat.push(px, py, pz, w.x, w.y, w.z);
         px = w.x;
         py = w.y;
         pz = w.z;

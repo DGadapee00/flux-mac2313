@@ -11,6 +11,19 @@ export function sampleCell(x0, y0, dx, dy, sample) {
   return { x: x0 + 0.5 * dx, y: y0 + 0.5 * dy };
 }
 
+export function riemann1d(f, a, b, { n = 8, sample = 'mid' } = {}) {
+  const nX = Math.max(1, n | 0);
+  const dx = (b - a) / nX;
+  let sum = 0;
+  for (let i = 0; i < nX; i++) {
+    const x0 = a + i * dx;
+    const x =
+      sample === 'left' || sample === 'll' ? x0 : sample === 'right' || sample === 'ur' ? x0 + dx : x0 + 0.5 * dx;
+    sum += f(x) * dx;
+  }
+  return { sum, dx, n: nX };
+}
+
 export function riemannRect(f, xa, xb, ya, yb, { nx = 4, ny = 4, sample = 'mid' } = {}) {
   const nX = Math.max(1, nx | 0);
   const nY = Math.max(1, ny | 0);
@@ -59,4 +72,24 @@ export function riemannPolar(f, R, { nr = 6, nth = 12, sample = 'mid' } = {}) {
     }
   }
   return { sum, dr, dth, nr: nR, nth: nTh };
+}
+
+/** Midpoint Riemann sum on a box in R³. */
+export function riemann3(f, xa, xb, ya, yb, za, zb, { n = 4 } = {}) {
+  const nX = Math.max(1, n | 0);
+  const dx = (xb - xa) / nX;
+  const dy = (yb - ya) / nX;
+  const dz = (zb - za) / nX;
+  let sum = 0;
+  for (let i = 0; i < nX; i++) {
+    const x = xa + (i + 0.5) * dx;
+    for (let j = 0; j < nX; j++) {
+      const y = ya + (j + 0.5) * dy;
+      for (let k = 0; k < nX; k++) {
+        const z = za + (k + 0.5) * dz;
+        sum += f(x, y, z) * dx * dy * dz;
+      }
+    }
+  }
+  return { sum, dx, dy, dz, n: nX };
 }

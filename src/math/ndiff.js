@@ -1,3 +1,16 @@
+/** 1D difference quotients (Chapter 1). Central vs one-sided is a real second route. */
+export function df1(f, x, h = 1e-5) {
+  return (f(x + h) - f(x - h)) / (2 * h);
+}
+
+export function df1left(f, x, h = 1e-5) {
+  return (f(x) - f(x - h)) / h;
+}
+
+export function df1right(f, x, h = 1e-5) {
+  return (f(x + h) - f(x)) / h;
+}
+
 /** Central first partials and a forward difference quotient along a unit direction. */
 
 export function dfdx(f, x, y, h = 1e-5) {
