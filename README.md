@@ -27,15 +27,17 @@ npm test    # math self-test (no browser) + the problem-bank check
 |---|---|---|
 | Polar | `#/ch2/polar` | $(x,y)\leftrightarrow(r,\theta)$ with $\theta\in[0,2\pi)$, $\hat r$ and $\hat\theta$ |
 | Parametric | `#/ch2/parametric` | $\gamma(t)=(x(t),y(t))$, tangent, arc length two ways |
+| Partials | `#/ch2/partials` | $P_y$ / $Q_x$ slices, first and second partials, Schwarz $f_{xy}=f_{yx}$ |
 | Extrema | `#/ch2/extrema` | Critical points and the Hessian test $D=f_{xx}f_{yy}-(f_{xy})^2$ |
+| Chain rule | `#/ch2/chain` | $g=f\circ\gamma$, $g'=\nabla f\cdot\gamma'$; two-variable $h=f\circ g$ |
 | Gradient | `#/ch2/gradient` | $\nabla f$, $D_{\hat u}f$ by the dot product and by a difference quotient |
 
-Coming: partials-only, chain rule, then Chapters 3–5.
+Coming: Chapters 3–5.
 
-Practice (**P**) has 22 generated problems for this unit. Progress stays in this browser.
+Practice (**P**) has generated problems for this unit. Progress stays in this browser.
 
 Notation follows Merino: $(x,y)$, $\gamma(t)$, $D_u f$ with a unit vector, $\nabla f = (\partial f/\partial x, \partial f/\partial y)$, $\theta\in[0,2\pi)$.
 
 ## What the tests check
 
-Nothing is checked against itself. Analytic partials vs central differences; $D_{\hat u} f$ vs the difference quotient; steepest-ascent angle vs a 720-step sweep; polar round-trip and $\hat r\perp\hat\theta$; arc length Simpson vs polyline (and a closed form when we have one); Hessian $D$ vs mixed partials from finite differences; Fubini order swap; polar area (with the $r\,dr\,d\theta$ Jacobian) vs a Cartesian indicator. The problem bank is then run through each lab’s own `recompute`.
+Nothing is checked against itself. Analytic partials vs central differences; mixed $f_{xy}$ from $f$ vs $\partial_y f_x$ vs $\partial_x f_y$; $D_{\hat u} f$ vs the difference quotient; steepest-ascent angle vs a 720-step sweep; polar round-trip and $\hat r\perp\hat\theta$; arc length Simpson vs polyline (and a closed form when we have one); Hessian $D$ vs mixed partials from finite differences; chain-rule $g'$ vs a quotient of $g$ vs numeric $\nabla f\cdot\gamma'$; $h_s,h_t$ vs quotients of the composite; Fubini order swap; polar area (with the $r\,dr\,d\theta$ Jacobian) vs a Cartesian indicator. The problem bank is then run through each lab’s own `recompute`.

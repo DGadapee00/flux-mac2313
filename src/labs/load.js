@@ -1,7 +1,9 @@
 const loaders = {
   polar: () => import('./polar.js'),
   parametric: () => import('./parametric.js'),
+  partials: () => import('./partials.js'),
   extrema: () => import('./extrema.js'),
+  chain: () => import('./chain.js'),
   gradient: () => import('./gradient.js'),
 };
 

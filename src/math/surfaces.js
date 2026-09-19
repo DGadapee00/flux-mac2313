@@ -1,6 +1,6 @@
 /**
- * Named f(x,y) used by the gradient lab. Each surface carries analytic partials — route A —
- * so the lab never differentiates by hand inside a render function.
+ * Named f(x,y) used by the Chapter 2 labs. Each surface carries analytic partials — route A —
+ * so a lab never differentiates by hand inside a render function.
  *
  * Params default to a = b = 1, c = 0. Problems may overwrite them.
  */
@@ -118,6 +118,18 @@ export const SURFACES = {
       { x: 0, y: 0 },
       { x: 1, y: 1 },
     ],
+  },
+  prod2: {
+    id: 'prod2',
+    name: 'x² y',
+    tex: (p) => `${fmtC(P(p).a)}x^2 y`,
+    f: (x, y, p) => P(p).a * x * x * y,
+    fx: (x, y, p) => 2 * P(p).a * x * y,
+    fy: (x, y, p) => P(p).a * x * x,
+    fxx: (x, y, p) => 2 * P(p).a * y,
+    fyy: () => 0,
+    fxy: (x, y, p) => 2 * P(p).a * x,
+    critical: () => [],
   },
 };
 

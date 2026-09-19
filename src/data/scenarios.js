@@ -26,6 +26,23 @@ export const SCENARIOS = {
     { id: 'cubic', name: '(t², t³ − 3t)', curveId: 'cubic', ...{ xMin: -1, xMax: 5, yMin: -3, yMax: 3 } },
     { id: 'spiral', name: 'Spiral (t cos t, t sin t)', curveId: 'spiral', ...{ xMin: -7, xMax: 7, yMin: -7, yMax: 7 } },
   ],
+  partials: [
+    { id: 'paraboloid', name: 'Paraboloid  x² + y²', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.9, y: 0.6 }, ...DOMAIN },
+    { id: 'saddle', name: 'Saddle  x² − y²', surfaceId: 'saddle', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.8, y: 0.5 }, ...DOMAIN },
+    { id: 'xy', name: 'Product  xy', surfaceId: 'xy', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.9, y: 0.7 }, ...DOMAIN },
+    { id: 'prod2', name: 'x² y  — mixed ≠ 0', surfaceId: 'prod2', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.8, y: 0.5 }, ...DOMAIN },
+    { id: 'gaussian', name: 'Gaussian bump', surfaceId: 'gaussian', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.6, y: 0.4 }, ...DOMAIN },
+    { id: 'cubic', name: 'Cubic  x³ + y³ − 3xy', surfaceId: 'cubic', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.7, y: 0.4 }, ...DOMAIN },
+  ],
+  chain: [
+    { id: 'xy-circle', name: 'xy along the circle', mode: 'curve', surfaceId: 'xy', curveId: 'circle', params: { a: 1, b: 1, c: 0 }, ...DOMAIN },
+    { id: 'para-parab', name: 'Paraboloid along (t, t²)', mode: 'curve', surfaceId: 'paraboloid', curveId: 'parabola', params: { a: 1, b: 1, c: 0 }, xMin: -2, xMax: 2, yMin: -0.5, yMax: 2.5 },
+    { id: 'saddle-circle', name: 'Saddle along the circle', mode: 'curve', surfaceId: 'saddle', curveId: 'circle', params: { a: 1, b: 1, c: 0 }, ...DOMAIN },
+    { id: 'gauss-circle', name: 'Gaussian along the circle', mode: 'curve', surfaceId: 'gaussian', curveId: 'circle', params: { a: 1, b: 1, c: 0 }, ...DOMAIN },
+    { id: 'xy-polar', name: 'xy in polar (s, t)', mode: 'map', surfaceId: 'xy', innerId: 'polar', params: { a: 1, b: 1, c: 0 }, ...DOMAIN },
+    { id: 'para-polar', name: 'Paraboloid in polar', mode: 'map', surfaceId: 'paraboloid', innerId: 'polar', params: { a: 1, b: 1, c: 0 }, ...DOMAIN },
+    { id: 'xy-bilin', name: 'xy with (st², s²t)', mode: 'map', surfaceId: 'xy', innerId: 'bilinear', params: { a: 1, b: 1, c: 0 }, ...DOMAIN },
+  ],
   extrema: [
     { id: 'paraboloid', name: 'Paraboloid — one min', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.8, y: 0.5 }, ...DOMAIN },
     { id: 'saddle', name: 'Saddle', surfaceId: 'saddle', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.7, y: 0.4 }, ...DOMAIN },
@@ -46,6 +63,10 @@ export function applyScenario(labId, id, state) {
   if (sc.params) state.params = { ...sc.params };
   if (sc.probe) state.probe = { x: sc.probe.x, y: sc.probe.y, z: sc.probe.z || 0 };
   if (sc.theta != null) state.theta = sc.theta;
+  if (sc.mode != null) state.mode = sc.mode;
+  if (sc.innerId) state.innerId = sc.innerId;
+  if (sc.s != null) state.s = sc.s;
+  if (sc.t != null) state.t = sc.t;
   if (sc.xMin != null) state.xMin = sc.xMin;
   if (sc.xMax != null) state.xMax = sc.xMax;
   if (sc.yMin != null) state.yMin = sc.yMin;

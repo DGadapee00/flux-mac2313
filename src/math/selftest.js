@@ -13,6 +13,7 @@ import { directional, steepestAngle, steepestSweep, wrapPi, unitize, dirFromAngl
 import { toPolar, toCart, rHat, thetaHat, wrapTau } from './polar.js';
 import { CURVES, evalCurve, polylineLength } from './curves.js';
 import { hessian, classify } from './extrema.js';
+import { chainAlong, gQuotient, chainMap, hQuotientS, hQuotientT, INNERS } from './chain.js';
 
 let failed = 0;
 let passed = 0;
@@ -260,6 +261,52 @@ console.log('Hessian test');
   approx(d2fdx2(fn, x, y), an.fxx, 2e-3, 'cubic fxx numeric');
   approx(d2fdy2(fn, x, y), an.fyy, 2e-3, 'cubic fyy numeric');
   approx(d2fdxdy(fn, x, y), an.fxy, 2e-3, 'cubic fxy numeric');
+}
+
+console.log('Schwarz: mixed from f vs from first partials');
+{
+  const s = SURFACES.prod2;
+  const p = { a: 2 };
+  const x = 0.6;
+  const y = -0.4;
+  const an = evalSurface(s, x, y, p);
+  const fn = (xx, yy) => s.f(xx, yy, p);
+  const fxFn = (xx, yy) => s.fx(xx, yy, p);
+  const fyFn = (xx, yy) => s.fy(xx, yy, p);
+  approx(an.fxy, 2 * p.a * x, 1e-12, 'prod2 analytic fxy = 2ax');
+  approx(d2fdxdy(fn, x, y), an.fxy, 2e-3, 'prod2 four-point mixed');
+  approx(dfdy(fxFn, x, y), an.fxy, 2e-5, 'prod2 ∂/∂y of fx');
+  approx(dfdx(fyFn, x, y), an.fxy, 2e-5, 'prod2 ∂/∂x of fy');
+  absApprox(dfdy(fxFn, x, y) - dfdx(fyFn, x, y), 0, 2e-5, 'prod2 Schwarz numeric');
+}
+
+console.log('chain rule');
+{
+  const t = Math.PI / 3;
+  const an = chainAlong(SURFACES.xy, CURVES.circle, t, { a: 1 });
+  approx(an.gp, Math.cos(2 * t), 1e-12, 'xy along circle, analytic g′ = cos 2t');
+  approx(gQuotient(SURFACES.xy, CURVES.circle, t, { a: 1 }), an.gp, 2e-5, 'g′ quotient vs chain');
+  const fn = (x, y) => SURFACES.xy.f(x, y, { a: 1 });
+  const gN = gradNumeric(fn, an.x, an.y);
+  approx(gN.x * an.xp + gN.y * an.yp, an.gp, 2e-5, 'numeric ∇f · γ′ vs chain');
+
+  const an2 = chainAlong(SURFACES.paraboloid, CURVES.parabola, 1, { a: 1, b: 1 });
+  approx(an2.gp, 6, 1e-12, 'x²+y² along (t,t²) at t=1');
+  approx(gQuotient(SURFACES.paraboloid, CURVES.parabola, 1, { a: 1, b: 1 }), 6, 2e-5, 'parabola g′ quotient');
+
+  const inn = INNERS.polar;
+  const s = 1.2;
+  const th = 0.7;
+  const h = chainMap(SURFACES.paraboloid, inn, s, th, { a: 1, b: 1 });
+  approx(h.hs, 2 * s, 1e-12, 'polar h_s = 2s for x²+y²');
+  absApprox(h.ht, 0, 1e-12, 'polar h_t = 0 for x²+y²');
+  approx(hQuotientS(SURFACES.paraboloid, inn, s, th, { a: 1, b: 1 }), h.hs, 2e-5, 'h_s quotient');
+  absApprox(hQuotientT(SURFACES.paraboloid, inn, s, th, { a: 1, b: 1 }), 0, 2e-5, 'h_t quotient');
+
+  const innB = INNERS.bilinear;
+  const hb = chainMap(SURFACES.xy, innB, 0.8, 0.9, { a: 1 });
+  approx(hQuotientS(SURFACES.xy, innB, 0.8, 0.9, { a: 1 }), hb.hs, 2e-4, 'bilinear h_s quotient vs chain');
+  approx(hQuotientT(SURFACES.xy, innB, 0.8, 0.9, { a: 1 }), hb.ht, 2e-4, 'bilinear h_t quotient vs chain');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

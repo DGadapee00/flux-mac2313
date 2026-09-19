@@ -6,6 +6,8 @@ import { TangentPlaneView } from '../scene/tangent.js';
 import { PolarGridView } from '../scene/polarGrid.js';
 import { CurveView } from '../scene/curve.js';
 import { CritView } from '../scene/crits.js';
+import { SliceView } from '../scene/slices.js';
+import { M } from '../scene/manim.js';
 
 /** Lazy view pool: a lab's first visit builds what it needs; exit hides, does not dispose. */
 export function createViewPool(scene) {
@@ -23,6 +25,8 @@ export function createViewPool(scene) {
     tangent: () => once('tangent', () => new TangentPlaneView(scene)),
     polarGrid: () => once('polarGrid', () => new PolarGridView(scene)),
     curve: () => once('curve', () => new CurveView(scene)),
+    lift: () => once('lift', () => new CurveView(scene, { color: M.gold, tanColor: M.yellow, width: 3.4 })),
+    slices: () => once('slices', () => new SliceView(scene)),
     crits: () => once('crits', () => new CritView(scene)),
     hideAll() {
       made.surface?.setVisible(false);
@@ -32,6 +36,8 @@ export function createViewPool(scene) {
       made.tangent?.setVisible(false);
       made.polarGrid?.setVisible(false);
       made.curve?.setVisible(false);
+      made.lift?.setVisible(false);
+      made.slices?.setVisible(false);
       made.crits?.setVisible(false);
     },
   };
