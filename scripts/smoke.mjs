@@ -1,4 +1,5 @@
 import { chromium } from './playwright.mjs';
+import { EXAMS } from '../src/data/catalog.js';
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -19,6 +20,26 @@ async function go(hash, lab) {
   }
   await page.waitForTimeout(400);
 }
+
+const CHECK = {
+  limits: (c) => Number.isFinite(c.fp) && c.agree,
+  riemann1: (c) => Number.isFinite(c.Iclosed),
+  polar: (c) => Number.isFinite(c.r) && c.err < 1e-10,
+  parametric: (c) => Number.isFinite(c.Lsimp),
+  partials: (c) => Number.isFinite(c.fx) && c.agree,
+  extrema: (c) => Number.isFinite(c.D),
+  chain: (c) => c.agree === true,
+  gradient: (c) => Number.isFinite(c.Du) && Number.isFinite(c.Dq),
+  riemann: (c) => Number.isFinite(c.sum),
+  iterated: (c) => Number.isFinite(c.Ixy) && c.agree,
+  dpolar: (c) => Number.isFinite(c.Ipolar) && c.agree,
+  r3: (c) => Number.isFinite(c.du) && c.agree,
+  space: (c) => Number.isFinite(c.Lsimp) && c.agree,
+  partials3: (c) => Number.isFinite(c.fx) && c.agree,
+  triple: (c) => Number.isFinite(c.Ixyz) && c.agree,
+  cyl: (c) => Number.isFinite(c.Icyl) && c.agree,
+  sph: (c) => Number.isFinite(c.Isph) && c.agree,
+};
 
 await page.goto('http://localhost:5175/#/ch2/gradient', { waitUntil: 'networkidle', timeout: 30000 });
 await page.waitForFunction((id) => window.__flux?.state?.lab === id, 'gradient', { timeout: 10000 });
@@ -56,6 +77,19 @@ if (g.lab !== 'gradient') mismatches.push({ name: 'lab', got: g.lab, exp: 'gradi
 if (!Number.isFinite(g.f)) mismatches.push({ name: 'f', got: g.f, exp: 'finite' });
 check('Du vs Dq', g.Du, g.Dq, 0.05);
 
+const catalogLabs = EXAMS.flatMap((e) => e.labs.map((id) => ({ exam: e.id, id })));
+for (const { exam, id } of catalogLabs) {
+  await go(`#/${exam}/${id}`, id);
+  const snap = await page.evaluate(() => ({
+    lab: window.__flux?.state?.lab,
+    computed: window.__flux?.computed || {},
+  }));
+  if (snap.lab !== id) mismatches.push({ name: `${id}.lab`, got: snap.lab, exp: id });
+  const ok = CHECK[id];
+  if (!ok) mismatches.push({ name: `${id}.check`, got: 'missing', exp: 'defined' });
+  else if (!ok(snap.computed)) mismatches.push({ name: `${id}.routes`, got: false, exp: true });
+}
+
 await go('#/ch1/limits', 'limits');
 await page.waitForTimeout(300);
 await go('#/ch2/gradient', 'gradient');
@@ -73,4 +107,4 @@ if (mismatches.length) {
   console.error('mismatches:', mismatches);
   process.exit(1);
 }
-console.log('smoke: gradient lab ok', { f: g.f, Du: g.Du, back: afterBack });
+console.log('smoke: all labs ok', { labs: catalogLabs.length, f: g.f, Du: g.Du, back: afterBack });

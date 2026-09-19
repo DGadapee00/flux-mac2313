@@ -67,7 +67,7 @@ npm test    # math self-test (no browser) + the problem-bank check
 
 The notes stop at triple integrals. There is no Green / Stokes / Divergence lab.
 
-Practice (**P**) has generated problems for this unit. Progress stays in this browser.
+Practice (**P**) has generated problems for every unit. Progress stays in this browser.
 
 Notation follows Merino: $(x,y)$ and $(x,y,z)$, $\gamma(t)$, $D_u f$ with a unit vector, $\nabla f = (\partial f/\partial x, \partial f/\partial y)$ or the three-component analogue, $\theta\in[0,2\pi)$, cross product only in $\mathbb{R}^3$.
 
