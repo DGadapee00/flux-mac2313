@@ -16,6 +16,10 @@ import { hessian, classify } from './extrema.js';
 import { chainAlong, gQuotient, chainMap, hQuotientS, hQuotientT, INNERS } from './chain.js';
 import { riemannRect, riemannPolar } from './riemann.js';
 import { closedRect, closedDisk, closedTriangle, diskTypeI, diskTypeII, triangleBounds } from './double.js';
+import { polarizeDot, paraArea } from './r3.js';
+import { SPACE_CURVES, evalSpace, polylineLength3 } from './space.js';
+import { FIELDS3, evalField } from './fields3.js';
+import { dfdx3, dfdy3, dfdz3, d2fdxdy3, d2fdydx3, gradNumeric3 } from './ndiff.js';
 
 let failed = 0;
 let passed = 0;
@@ -348,6 +352,61 @@ console.log('double Riemann sums and regions');
   approx(closedDisk('one', 2), 4 * Math.PI, 1e-12, 'area of D_2 = 4π');
   approx(closedDisk('xy', 1), 0, 1e-12, '∬ xy on a disk is 0');
   approx(closedDisk('gaussian', 1), Math.PI * (1 - Math.exp(-1)), 1e-12, 'gaussian disk closed form');
+}
+
+console.log('R³: polarization and parallelogram');
+{
+  const u = { x: 1.2, y: 0.7, z: 0.4 };
+  const v = { x: 0.3, y: 1.1, z: 0.8 };
+  approx(polarizeDot(u, v), dot(u, v), 1e-12, 'polarization vs component dot');
+  approx(paraArea(u, v), len(cross(u, v)), 1e-12, 'para area vs ||u×v||');
+  absApprox(dot(cross(u, v), u), 0, 1e-12, '(u×v)·u = 0');
+  absApprox(dot(cross(u, v), v), 0, 1e-12, '(u×v)·v = 0');
+  const e1 = { x: 1, y: 0, z: 0 };
+  const e2 = { x: 0, y: 1, z: 0 };
+  const e3 = cross(e1, e2);
+  approx(e3.z, 1, 1e-12, 'e1 × e2 = e3');
+}
+
+console.log('space curves');
+{
+  const h = SPACE_CURVES.helix;
+  const e = evalSpace(h, Math.PI / 2);
+  absApprox(e.x, 0, 1e-12, 'helix γ(π/2).x');
+  absApprox(e.y, 1, 1e-12, 'helix γ(π/2).y');
+  approx(e.z, Math.PI / 4, 1e-12, 'helix γ(π/2).z');
+  approx(h.length(0, 2 * Math.PI), Math.PI * Math.sqrt(5), 1e-12, 'helix closed length π√5');
+  approx(simpson((t) => h.speed(t), 0, 2 * Math.PI), Math.PI * Math.sqrt(5), 1e-6, 'helix Simpson');
+  approx(polylineLength3(h, 0, 2 * Math.PI, 800), Math.PI * Math.sqrt(5), 0.01, 'helix polyline');
+
+  const coil = SPACE_CURVES.coil;
+  approx(coil.length(0, 2 * Math.PI), 2 * Math.PI * Math.sqrt(5), 1e-12, 'coil closed length');
+  approx(simpson((t) => coil.speed(t), 0, 2 * Math.PI), coil.length(0, 2 * Math.PI), 1e-6, 'coil Simpson vs closed');
+  approx(polylineLength3(SPACE_CURVES.cubic, -1, 1, 600), simpson((t) => SPACE_CURVES.cubic.speed(t), -1, 1), 0.01, 'cubic polyline vs Simpson');
+}
+
+console.log('partials in R³');
+{
+  const f = (x, y, z) => x * y * z;
+  approx(dfdx3(f, 1, 2, 3), 6, 1e-6, '∂/∂x of xyz at (1,2,3)');
+  approx(dfdy3(f, 1, 2, 3), 3, 1e-6, '∂/∂y of xyz');
+  approx(dfdz3(f, 1, 2, 3), 2, 1e-6, '∂/∂z of xyz');
+  const gN = gradNumeric3(f, 1, 2, 3);
+  approx(gN.x, 6, 1e-6, 'numeric grad xyz.x');
+  const fld = FIELDS3.prod;
+  const p = {};
+  const x = 0.5;
+  const y = -0.4;
+  const z = 0.8;
+  const an = evalField(fld, x, y, z, p);
+  const fn = (xx, yy, zz) => fld.f(xx, yy, zz, p);
+  approx(d2fdxdy3(fn, x, y, z), an.fxy, 2e-3, 'prod fxy four-point');
+  approx(d2fdydx3(fn, x, y, z), an.fxy, 2e-3, 'prod fyx four-point');
+  absApprox(d2fdxdy3(fn, x, y, z) - d2fdydx3(fn, x, y, z), 0, 2e-5, 'Schwarz in R³ for x²yz');
+  const bowl = evalField(FIELDS3.bowl, 0, 0, 0, {});
+  absApprox(bowl.fx, 0, 0, 'bowl ∇f at origin, fx');
+  absApprox(bowl.fy, 0, 0, 'bowl ∇f at origin, fy');
+  absApprox(bowl.fz, 0, 0, 'bowl ∇f at origin, fz');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

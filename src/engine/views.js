@@ -9,6 +9,7 @@ import { CritView } from '../scene/crits.js';
 import { SliceView } from '../scene/slices.js';
 import { RiemannView } from '../scene/riemann.js';
 import { RegionView } from '../scene/region.js';
+import { SpaceArrowsView } from '../scene/spaceArrows.js';
 import { M } from '../scene/manim.js';
 
 /** Lazy view pool: a lab's first visit builds what it needs; exit hides, does not dispose. */
@@ -31,6 +32,7 @@ export function createViewPool(scene) {
     slices: () => once('slices', () => new SliceView(scene)),
     riemann: () => once('riemann', () => new RiemannView(scene)),
     region: () => once('region', () => new RegionView(scene)),
+    spaceArrows: () => once('spaceArrows', () => new SpaceArrowsView(scene)),
     crits: () => once('crits', () => new CritView(scene)),
     hideAll() {
       made.surface?.setVisible(false);
@@ -44,6 +46,7 @@ export function createViewPool(scene) {
       made.slices?.setVisible(false);
       made.riemann?.setVisible(false);
       made.region?.setVisible(false);
+      made.spaceArrows?.setVisible(false);
       made.crits?.setVisible(false);
     },
   };

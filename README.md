@@ -42,12 +42,20 @@ npm test    # math self-test (no browser) + the problem-bank check
 | Iterated | `#/ch3/iterated` | $\iint dy\,dx$ vs $dx\,dy$ (Fubini), type I / type II regions |
 | Polar | `#/ch3/dpolar` | Disk $D_R$: Jacobian $r$, polar vs Cartesian vs polar Riemann |
 
-Coming: Chapters 4–5.
+### Chapter 4
+
+| Lab | Hash | What it shows |
+|---|---|---|
+| R³ | `#/ch4/r3` | $u\cdot v$ two ways, $u\times v$, parallelogram area |
+| Space | `#/ch4/space` | $\gamma(t)=(x(t),y(t),z(t))$, tangent line, arc length two ways |
+| Partials | `#/ch4/partials3` | $f_x,f_y,f_z$ and $\nabla f$ in $\mathbb{R}^3$, Schwarz in three variables |
+
+Coming: Chapter 5 (triple integrals: cylindrical, spherical).
 
 Practice (**P**) has generated problems for this unit. Progress stays in this browser.
 
-Notation follows Merino: $(x,y)$, $\gamma(t)$, $D_u f$ with a unit vector, $\nabla f = (\partial f/\partial x, \partial f/\partial y)$, $\theta\in[0,2\pi)$.
+Notation follows Merino: $(x,y)$ and $(x,y,z)$, $\gamma(t)$, $D_u f$ with a unit vector, $\nabla f = (\partial f/\partial x, \partial f/\partial y)$ or the three-component analogue, $\theta\in[0,2\pi)$, cross product only in $\mathbb{R}^3$.
 
 ## What the tests check
 
-Nothing is checked against itself. Analytic partials vs central differences; mixed $f_{xy}$ from $f$ vs $\partial_y f_x$ vs $\partial_x f_y$; $D_{\hat u} f$ vs the difference quotient; steepest-ascent angle vs a 720-step sweep; polar round-trip and $\hat r\perp\hat\theta$; arc length Simpson vs polyline (and a closed form when we have one); Hessian $D$ vs mixed partials from finite differences; chain-rule $g'$ vs a quotient of $g$ vs numeric $\nabla f\cdot\gamma'$; $h_s,h_t$ vs quotients of the composite; Riemann sum vs Simpson vs closed form; Fubini $dy\,dx$ vs $dx\,dy$; type I vs type II on a disk and a triangle; polar $\iint$ (with the $r\,dr\,d\theta$ Jacobian) vs Cartesian type I vs polar Riemann. The problem bank is then run through each lab’s own `recompute`.
+Nothing is checked against itself. Analytic partials vs central differences; mixed $f_{xy}$ from $f$ vs $\partial_y f_x$ vs $\partial_x f_y$; $D_{\hat u} f$ vs the difference quotient; steepest-ascent angle vs a 720-step sweep; polar round-trip and $\hat r\perp\hat\theta$; arc length Simpson vs polyline (and a closed form when we have one); Hessian $D$ vs mixed partials from finite differences; chain-rule $g'$ vs a quotient of $g$ vs numeric $\nabla f\cdot\gamma'$; $h_s,h_t$ vs quotients of the composite; Riemann sum vs Simpson vs closed form; Fubini $dy\,dx$ vs $dx\,dy$; type I vs type II on a disk and a triangle; polar $\iint$ (with the $r\,dr\,d\theta$ Jacobian) vs Cartesian type I vs polar Riemann; $u\cdot v$ vs polarization; $\|u\times v\|$ vs parallelogram area from a projection; space-curve length Simpson vs polyline; $f_x,f_y,f_z$ in $\mathbb{R}^3$ vs central differences and Schwarz $f_{xy}=f_{yx}$. The problem bank is then run through each lab’s own `recompute`.

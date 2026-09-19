@@ -31,3 +31,36 @@ export function gradNumeric(f, x, y, h = 1e-5) {
 export function dirQuotient(f, x, y, ux, uy, h = 1e-5) {
   return (f(x + h * ux, y + h * uy) - f(x, y)) / h;
 }
+
+/** Central first and mixed partials of f(x,y,z). */
+export function dfdx3(f, x, y, z, h = 1e-5) {
+  return (f(x + h, y, z) - f(x - h, y, z)) / (2 * h);
+}
+
+export function dfdy3(f, x, y, z, h = 1e-5) {
+  return (f(x, y + h, z) - f(x, y - h, z)) / (2 * h);
+}
+
+export function dfdz3(f, x, y, z, h = 1e-5) {
+  return (f(x, y, z + h) - f(x, y, z - h)) / (2 * h);
+}
+
+export function d2fdxdy3(f, x, y, z, h = 1e-4) {
+  return (f(x + h, y + h, z) - f(x + h, y - h, z) - f(x - h, y + h, z) + f(x - h, y - h, z)) / (4 * h * h);
+}
+
+export function d2fdydx3(f, x, y, z, h = 1e-4) {
+  return (f(x + h, y + h, z) - f(x - h, y + h, z) - f(x + h, y - h, z) + f(x - h, y - h, z)) / (4 * h * h);
+}
+
+export function d2fdxdz3(f, x, y, z, h = 1e-4) {
+  return (f(x + h, y, z + h) - f(x + h, y, z - h) - f(x - h, y, z + h) + f(x - h, y, z - h)) / (4 * h * h);
+}
+
+export function d2fdydz3(f, x, y, z, h = 1e-4) {
+  return (f(x, y + h, z + h) - f(x, y + h, z - h) - f(x, y - h, z + h) + f(x, y - h, z - h)) / (4 * h * h);
+}
+
+export function gradNumeric3(f, x, y, z, h = 1e-5) {
+  return { x: dfdx3(f, x, y, z, h), y: dfdy3(f, x, y, z, h), z: dfdz3(f, x, y, z, h) };
+}

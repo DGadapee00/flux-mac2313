@@ -34,8 +34,8 @@ export const EXAMS = [
     title: 'Three variables',
     chapters: '4',
     date: 'Ch 4',
-    labs: [],
-    coming: ['R³', 'Space curves', 'Partials in R³'],
+    labs: ['r3', 'space', 'partials3'],
+    coming: [],
   },
   {
     id: 'ch5',
@@ -58,6 +58,9 @@ export const LAB_META = {
   riemann: { id: 'riemann', exam: 'ch3', title: 'Riemann' },
   iterated: { id: 'iterated', exam: 'ch3', title: 'Iterated' },
   dpolar: { id: 'dpolar', exam: 'ch3', title: 'Polar' },
+  r3: { id: 'r3', exam: 'ch4', title: 'R³' },
+  space: { id: 'space', exam: 'ch4', title: 'Space' },
+  partials3: { id: 'partials3', exam: 'ch4', title: 'Partials' },
 };
 
 export const CHAPTER_TITLES = {

@@ -8,6 +8,9 @@ const loaders = {
   riemann: () => import('./riemann.js'),
   iterated: () => import('./iterated.js'),
   dpolar: () => import('./dpolar.js'),
+  r3: () => import('./r3.js'),
+  space: () => import('./space.js'),
+  partials3: () => import('./partials3.js'),
 };
 
 const cache = new Map();

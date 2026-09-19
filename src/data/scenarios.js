@@ -65,6 +65,26 @@ export const SCENARIOS = {
     { id: 'gauss', name: 'Gaussian bump on D_R', surfaceId: 'gaussian', params: { a: 1, b: 1, c: 0 }, R: 1.4, n: 6 },
     { id: 'r2', name: 'Unit disk, R=1', surfaceId: 'one', params: { a: 1, b: 1, c: 0 }, R: 1, n: 8 },
   ],
+  r3: [
+    { id: 'ij', name: 'u along x, v along y', u: { x: 1.5, y: 0, z: 0 }, v: { x: 0, y: 1.5, z: 0 } },
+    { id: 'ik', name: 'u along x, v along z', u: { x: 1.5, y: 0, z: 0 }, v: { x: 0, y: 0, z: 1.4 } },
+    { id: 'generic', name: 'A generic pair', u: { x: 1.2, y: 0.7, z: 0.4 }, v: { x: 0.3, y: 1.1, z: 0.8 } },
+    { id: 'obtuse', name: 'Obtuse angle', u: { x: 1.6, y: 0, z: 0 }, v: { x: -0.8, y: 1.2, z: 0.3 } },
+    { id: 'parallel', name: 'Nearly parallel', u: { x: 1.4, y: 0.4, z: 0.2 }, v: { x: 1.1, y: 0.3, z: 0.15 } },
+  ],
+  space: [
+    { id: 'helix', name: 'Helix (cos t, sin t, t/2)', curveId: 'helix' },
+    { id: 'coil', name: '(t, 2 cos t, 2 sin t)', curveId: 'coil' },
+    { id: 'cubic', name: '(t, t², t³)', curveId: 'cubic' },
+    { id: 'line', name: 'Line (2t, t, 1−t)', curveId: 'line' },
+  ],
+  partials3: [
+    { id: 'bowl', name: 'x² + y² + z²', fieldId: 'bowl', probe: { x: 0.8, y: 0.5, z: 0.6 }, xMin: -2, xMax: 2, yMin: -2, yMax: 2 },
+    { id: 'saddle3', name: 'x² + y² − z²  (saddle)', fieldId: 'saddle3', probe: { x: 0.6, y: 0.4, z: 0.5 }, xMin: -2, xMax: 2, yMin: -2, yMax: 2 },
+    { id: 'xyz', name: 'xyz', fieldId: 'xyz', probe: { x: 1, y: 0.8, z: 0.5 }, xMin: -2, xMax: 2, yMin: -2, yMax: 2 },
+    { id: 'prod', name: 'x² y z', fieldId: 'prod', probe: { x: 0.9, y: 0.6, z: 0.7 }, xMin: -2, xMax: 2, yMin: -2, yMax: 2 },
+    { id: 'linear', name: '2x − y + 3z', fieldId: 'linear', params: { a: 2, b: -1, c: 3 }, probe: { x: 0.4, y: -0.3, z: 0.5 }, xMin: -2, xMax: 2, yMin: -2, yMax: 2 },
+  ],
   extrema: [
     { id: 'paraboloid', name: 'Paraboloid — one min', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.8, y: 0.5 }, ...DOMAIN },
     { id: 'saddle', name: 'Saddle', surfaceId: 'saddle', params: { a: 1, b: 1, c: 0 }, probe: { x: 0.7, y: 0.4 }, ...DOMAIN },
@@ -94,6 +114,9 @@ export function applyScenario(labId, id, state) {
   if (sc.order) state.order = sc.order;
   if (sc.R != null) state.R = sc.R;
   if (sc.region) state.region = sc.region;
+  if (sc.u) state.u = { x: sc.u.x, y: sc.u.y, z: sc.u.z };
+  if (sc.v) state.v = { x: sc.v.x, y: sc.v.y, z: sc.v.z };
+  if (sc.fieldId) state.fieldId = sc.fieldId;
   if (sc.xMin != null) state.xMin = sc.xMin;
   if (sc.xMax != null) state.xMax = sc.xMax;
   if (sc.yMin != null) state.yMin = sc.yMin;
