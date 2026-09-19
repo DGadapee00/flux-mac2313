@@ -4,7 +4,13 @@ Interactive 3D labs for Calculus III (Merino, UNF). Units in the top row, labs a
 
 Built on the engine from [flux-phy2049](https://github.com/DGadapee00/flux-phy2049): the problem generator, spaced review, formula palette and the typeset panels are the same contracts; the math and the labs are new.
 
-Repo: https://github.com/DGadapee00/flux-mac2313 (`main`). Source only — none of the course’s lecture notes, worksheets, or Canvas files.
+## Open the live app
+
+**[https://flux-mac2313.pages.dev](https://flux-mac2313.pages.dev)** — no install. Works on a laptop, Chromebook, phone, or library machine.
+
+Deep links work the same as locally, e.g. `#/ch2/gradient`.
+
+Repo: https://github.com/DGadapee00/flux-mac2313 (`main`). Source only — none of the course’s lecture notes, worksheets, or Canvas files. **[DEPLOY.md](DEPLOY.md)** covers rebuilding and republishing.
 
 ## Run locally
 
