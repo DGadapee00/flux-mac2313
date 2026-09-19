@@ -16,8 +16,8 @@ export const EXAMS = [
     title: 'Two variables',
     chapters: '2',
     date: 'Ch 2',
-    labs: ['gradient'],
-    coming: ['R² / polar', 'Parametric curves', 'Partials', 'Extrema', 'Chain rule'],
+    labs: ['polar', 'parametric', 'extrema', 'gradient'],
+    coming: ['Partials', 'Chain rule'],
   },
   {
     id: 'ch3',
@@ -49,6 +49,9 @@ export const EXAMS = [
 ];
 
 export const LAB_META = {
+  polar: { id: 'polar', exam: 'ch2', title: 'Polar' },
+  parametric: { id: 'parametric', exam: 'ch2', title: 'Parametric' },
+  extrema: { id: 'extrema', exam: 'ch2', title: 'Extrema' },
   gradient: { id: 'gradient', exam: 'ch2', title: 'Gradient' },
 };
 

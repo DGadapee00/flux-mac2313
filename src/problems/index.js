@@ -2,8 +2,9 @@
  * Problem bank for MAC 2313. Each bank module exports an array of templates.
  */
 import ch2 from './bank/ch2.js';
+import ch2more from './bank/ch2more.js';
 
-export const PROBLEMS = [...ch2];
+export const PROBLEMS = [...ch2, ...ch2more];
 
 const byIdMap = new Map(PROBLEMS.map((p) => [p.id, p]));
 

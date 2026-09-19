@@ -1,3 +1,15 @@
+/** Decimal for live math panels. Tiny values print as 0 so sin(π) does not become 10^{-16}. */
+export function fmtNum(n, d = 3) {
+  if (!Number.isFinite(n)) return '—';
+  const a = Math.abs(n);
+  if (a < 1e-10) return '0';
+  if (a >= 1e4 || a < 0.001) {
+    const [m, e] = Number(n).toExponential(2).split('e');
+    return `${Number(m)}\\times 10^{${Number(e)}}`;
+  }
+  return String(Number(n.toFixed(d)));
+}
+
 export function sciHTML(x, digits = 2) {
   if (!Number.isFinite(x)) return '—';
   if (Math.abs(x) < 1e-18) return '0';

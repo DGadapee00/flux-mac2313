@@ -10,6 +10,9 @@ import { dfdx, dfdy, d2fdx2, d2fdy2, d2fdxdy, gradNumeric, dirQuotient } from '.
 import { simpson, integral2, integralPolar } from './quadrature.js';
 import { SURFACES, evalSurface } from './surfaces.js';
 import { directional, steepestAngle, steepestSweep, wrapPi, unitize, dirFromAngle } from './gradient.js';
+import { toPolar, toCart, rHat, thetaHat, wrapTau } from './polar.js';
+import { CURVES, evalCurve, polylineLength } from './curves.js';
+import { hessian, classify } from './extrema.js';
 
 let failed = 0;
 let passed = 0;
@@ -167,6 +170,96 @@ console.log('quadrature');
   const areaCart = integral2((x, y) => (x * x + y * y <= 1 ? 1 : 0), -1, 1, -1, 1, { order: 'xy', n: 200 });
   approx(areaCart, Math.PI, 0.03, 'Cartesian indicator of unit disk ≈ π');
   approx(areaPolar, areaCart, 0.04, 'polar vs Cartesian area of the unit disk');
+}
+
+console.log('polar: round-trip and basis');
+{
+  const pts = [
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+    [0, -1],
+    [1.2, 0.9],
+    [-0.7, 1.4],
+    [-1.1, -0.5],
+    [0.4, -1.3],
+  ];
+  for (const [x, y] of pts) {
+    const pol = toPolar(x, y);
+    const back = toCart(pol.r, pol.theta);
+    absApprox(back.x, x, 1e-12, `round-trip x (${x},${y})`);
+    absApprox(back.y, y, 1e-12, `round-trip y (${x},${y})`);
+    approx(pol.r * pol.r, x * x + y * y, 1e-12, `r^2 (${x},${y})`);
+    ok(pol.theta >= 0 && pol.theta < 2 * Math.PI, `θ in [0, 2π) for (${x},${y})`);
+    const rh = rHat(pol.theta);
+    const th = thetaHat(pol.theta);
+    absApprox(rh.x * th.x + rh.y * th.y, 0, 1e-12, `r-hat · θ-hat (${x},${y})`);
+    approx(rh.x * th.y - rh.y * th.x, 1, 1e-12, `det(r-hat, θ-hat)=1 (${x},${y})`);
+  }
+  const o = toPolar(0, 0);
+  absApprox(o.r, 0, 0, 'origin r = 0');
+  ok(!Number.isFinite(o.theta), 'origin θ undefined');
+  absApprox(wrapTau(-Math.PI / 2), 1.5 * Math.PI, 1e-12, 'wrap −π/2 → 3π/2');
+  absApprox(wrapTau(2 * Math.PI), 0, 1e-12, 'wrap 2π → 0');
+}
+
+console.log('parametric: derivatives and arc length');
+{
+  const circ = CURVES.circle;
+  const e = evalCurve(circ, Math.PI / 2);
+  absApprox(e.x, 0, 1e-12, 'circle γ(π/2).x');
+  absApprox(e.y, 1, 1e-12, 'circle γ(π/2).y');
+  absApprox(e.xp, -1, 1e-12, "circle γ'(π/2).x");
+  absApprox(e.yp, 0, 1e-12, "circle γ'(π/2).y");
+  ok(e.tangent === 'horizontal', 'circle at π/2 is horizontal');
+  approx(circ.length(0, 2 * Math.PI), 2 * Math.PI, 1e-12, 'circle closed length 2π');
+  const Ls = simpson((t) => circ.speed(t), 0, 2 * Math.PI);
+  approx(Ls, 2 * Math.PI, 1e-6, 'circle Simpson length');
+  approx(polylineLength(circ, 0, 2 * Math.PI, 800), 2 * Math.PI, 0.002, 'circle polyline length');
+
+  const par = CURVES.parabola;
+  const Lp = par.length(-1, 1);
+  const Ls2 = simpson((t) => par.speed(t), -1, 1);
+  approx(Ls2, Lp, 1e-5, 'parabola Simpson vs closed form');
+  approx(polylineLength(par, -1, 1, 800), Lp, 0.005, 'parabola polyline vs closed form');
+
+  const cub = evalCurve(CURVES.cubic, 0);
+  absApprox(cub.x, 0, 1e-12, 'cubic γ(0).x');
+  absApprox(cub.y, 0, 1e-12, 'cubic γ(0).y');
+  ok(cub.tangent === 'vertical', 'cubic at t=0 is vertical (x′=0, y′≠0)');
+}
+
+console.log('Hessian test');
+{
+  const para = classify(SURFACES.paraboloid, 0, 0, { a: 1, b: 1 });
+  ok(para.critical, 'paraboloid (0,0) critical');
+  ok(para.kind === 'min', 'paraboloid is a min');
+  approx(para.D, 4, 1e-12, 'paraboloid D=4');
+
+  const sad = classify(SURFACES.saddle, 0, 0, { a: 1, b: 1 });
+  ok(sad.kind === 'saddle', 'saddle classified');
+  approx(sad.D, -4, 1e-12, 'saddle D=−4');
+
+  const gau = classify(SURFACES.gaussian, 0, 0, {});
+  ok(gau.kind === 'max', 'gaussian is a max');
+  approx(gau.D, 4, 1e-12, 'gaussian D=4');
+
+  const c0 = classify(SURFACES.cubic, 0, 0, {});
+  ok(c0.kind === 'saddle', 'cubic (0,0) saddle');
+  const c1 = classify(SURFACES.cubic, 1, 1, {});
+  ok(c1.kind === 'min', 'cubic (1,1) min');
+  approx(c1.D, 27, 1e-12, 'cubic (1,1) D=27');
+
+  const H = hessian(0, 0, 0);
+  ok(H.kind === 'inconclusive', 'D=0 inconclusive');
+
+  const fn = (x, y) => x * x * x + y * y * y - 3 * x * y;
+  const x = 0.4;
+  const y = 0.3;
+  const an = evalSurface(SURFACES.cubic, x, y, {});
+  approx(d2fdx2(fn, x, y), an.fxx, 2e-3, 'cubic fxx numeric');
+  approx(d2fdy2(fn, x, y), an.fyy, 2e-3, 'cubic fyy numeric');
+  approx(d2fdxdy(fn, x, y), an.fxy, 2e-3, 'cubic fxy numeric');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
