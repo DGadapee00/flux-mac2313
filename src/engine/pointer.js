@@ -15,6 +15,29 @@ export function createChargePointer({ camera, controls, canvas, getState, getPoo
   const nrm = new THREE.Vector3();
   let drag = null;
   let down = null;
+  const proj = new THREE.Vector3();
+
+  /*
+   * Is the pointer actually on the probe handle?
+   *
+   * This used to be `if (state.probe)` — true in every lab that has a probe at all, which is most
+   * of them — so any left-press anywhere on the canvas grabbed P and switched OrbitControls off.
+   * Dragging empty space moved the probe instead of rotating the view, and the camera could not be
+   * orbited by mouse at all. Screen-space distance rather than a raycast against the handle: the
+   * dot is a few pixels wide, and a near miss should still grab it.
+   */
+  const GRAB_PX = 24;
+  function onProbe(e, state) {
+    if (!state.probe) return false;
+    const w = mathToWorld(state.probe.x, state.probe.y, state.probe.z, sceneScale());
+    proj.set(w.x, w.y, w.z);
+    if (!Number.isFinite(proj.x) || !Number.isFinite(proj.y) || !Number.isFinite(proj.z)) return false;
+    proj.project(camera);
+    if (!Number.isFinite(proj.x) || !Number.isFinite(proj.y) || proj.z > 1) return false;
+    const sx = (proj.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (-proj.y * 0.5 + 0.5) * window.innerHeight;
+    return Math.hypot(e.clientX - sx, e.clientY - sy) <= GRAB_PX;
+  }
 
   function setPointer(e) {
     pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -95,10 +118,13 @@ export function createChargePointer({ camera, controls, canvas, getState, getPoo
     setPointer(e);
     raycaster.setFromCamera(pointer, camera);
     down = { x: e.clientX, y: e.clientY, moved: false };
-    if (state.probe) {
+    if (onProbe(e, state)) {
+      // Grabbing the handle: take the drag and hand the camera back on pointerup.
       drag = { shift: e.shiftKey };
       controls.enabled = false;
     }
+    // Anywhere else the press belongs to OrbitControls, and a press that never moves still places
+    // the probe on pointerup below.
   });
 
   window.addEventListener('pointermove', (e) => {

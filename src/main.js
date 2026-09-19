@@ -8,7 +8,7 @@ import { parseHash, writeHash, neighborExam, problemQuery } from './engine/route
 import { createViewPool } from './engine/views.js';
 import { createChargePointer } from './engine/pointer.js';
 import { loadLab, loadExamLabs } from './labs/load.js';
-import { setFrame, refit, defaultView, sceneScale, workPlane } from './engine/frame.js';
+import { setFrame, refit, defaultView, sceneScale, workPlane, mathToWorld } from './engine/frame.js';
 import { applyProblem } from './problems/simbridge.js';
 import { createPractice } from './ui/problems.js';
 import { ANSWER_LAYER } from './scene/manim.js';
@@ -208,8 +208,15 @@ function shiftExam(dir) {
 
 async function setExam(examId, preferredLab) {
   const exam = examById(examId);
-  app.examId = exam.id;
+  if (!exam) throw new Error(`no such unit: ${examId}`);
+  /*
+   * Load first, commit after. This used to set app.examId before awaiting the unit's labs, so a
+   * dynamic import that failed left the app believing it had switched while the UI still showed the
+   * old unit — and because the booted unit's labs are already in memory, its own tab would keep
+   * "working" while every other tab did nothing at all.
+   */
   await loadExamLabs(exam.labs);
+  app.examId = exam.id;
   const id = preferredLab && exam.labs.includes(preferredLab) ? preferredLab : exam.labs[0];
   if (id) {
     await setLab(id);
@@ -391,6 +398,15 @@ window.__flux = {
   camera,
   controls,
   practice,
+  /** Where the probe is on screen, for the browser checks' drag tests. Null if there is no probe. */
+  probeScreen() {
+    const s = slice();
+    if (!s?.probe) return null;
+    const w = mathToWorld(s.probe.x, s.probe.y, s.probe.z, sceneScale());
+    const v = new THREE.Vector3(w.x, w.y, w.z).project(camera);
+    if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) return null;
+    return { x: (v.x * 0.5 + 0.5) * window.innerWidth, y: (-v.y * 0.5 + 0.5) * window.innerHeight };
+  },
 };
 window.__gauss = window.__flux;
 

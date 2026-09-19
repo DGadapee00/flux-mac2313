@@ -155,13 +155,26 @@ export function createHUD(api) {
     if (state?.scenarioId) $('scenario').value = state.scenarioId;
   }
 
+  /*
+   * setExam and setLab are async and were called fire-and-forget, so a failed dynamic import
+   * rejected into nothing: the tab took focus and the app did not move, with no way to tell a
+   * broken chunk from a dead click. Say so instead.
+   */
+  function navFailed(what, err) {
+    console.error(`FLUX: could not open ${what}`, err);
+    const hint = $('setup-hint');
+    if (hint) {
+      hint.textContent = `Could not open ${what}: ${err?.message || err}. Reload the page; if it persists the browser console has the detail.`;
+    }
+  }
+
   $('exam-tabs').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-exam]');
-    if (btn) api.setExam(btn.dataset.exam);
+    if (btn) Promise.resolve(api.setExam(btn.dataset.exam)).catch((err) => navFailed(`unit ${btn.textContent.trim()}`, err));
   });
   $('lab-tabs').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-lab]');
-    if (btn) api.setLab(btn.dataset.lab);
+    if (btn) Promise.resolve(api.setLab(btn.dataset.lab)).catch((err) => navFailed(btn.textContent.trim(), err));
   });
   $('scenario').addEventListener('change', () => api.setScenario($('scenario').value));
   $('btn-reset-cam').addEventListener('click', () => api.resetCamera());
