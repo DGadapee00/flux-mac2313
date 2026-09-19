@@ -5,10 +5,8 @@ import { add, dot, cross, len } from '../math/vec.js';
 import { polarizeDot, paraArea } from '../math/r3.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { agreeTo } from '../math/agree.js';
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.02 * Math.max(1, Math.abs(a), Math.abs(b));
-}
 
 function vec(state, prefix) {
   return {
@@ -120,7 +118,13 @@ export default defineLab({
     computed.areaB = areaB;
     computed.cu = dot(cr, u);
     computed.cv = dot(cr, v);
-    computed.agree = agree(du, duP) && agree(area, areaB);
+    /*
+     * ‖u‖‖v‖ is the yardstick for both: it bounds u·v and ‖u×v‖ alike, and unlike either of them it
+     * does not vanish when the vectors happen to be perpendicular or parallel — the two
+     * configurations a student is most likely to be sitting on.
+     */
+    const sUV = len(u) * len(v);
+    computed.agree = agreeTo(du, duP, sUV) && agreeTo(area, areaB, sUV);
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

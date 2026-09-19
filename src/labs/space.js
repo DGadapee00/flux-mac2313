@@ -5,10 +5,8 @@ import { spaceById, evalSpace, polylineLength3 } from '../math/space.js';
 import { simpson } from '../math/quadrature.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { agreeTo } from '../math/agree.js';
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.02 * Math.max(1, Math.abs(a), Math.abs(b));
-}
 
 export default defineLab({
   id: 'space',
@@ -105,7 +103,13 @@ export default defineLab({
     computed.Lsimp = Lsimp;
     computed.Lpoly = Lpoly;
     computed.Lclosed = Lclosed;
-    computed.agree = agree(Lsimp, Lpoly) && (!Number.isFinite(Lclosed) || agree(Lsimp, Lclosed));
+    /*
+     * Arc length is non-negative and cannot cancel, so it is its own yardstick — but it is zero at
+     * t = t0, where a floor of 1 used to wave through any disagreement at all.
+     */
+    const sL = Math.max(Math.abs(Lsimp), Math.abs(Lpoly));
+    computed.agree =
+      agreeTo(Lsimp, Lpoly, sL) && (!Number.isFinite(Lclosed) || agreeTo(Lsimp, Lclosed, sL));
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

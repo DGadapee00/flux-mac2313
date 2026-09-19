@@ -1,4 +1,4 @@
-import { problem, range, num, mc, tf, kase, domain } from '../kit.js';
+import { problem, range, num, mc, tf, kase, domain, coef, prod } from '../kit.js';
 
 const box = { xMin: -2, xMax: 2, yMin: -2, yMax: 2 };
 
@@ -21,7 +21,7 @@ export default [
     },
     derive: ($) => ({ fxx: 2 * $.a, fyy: 2 * $.b, fxy: 0 }),
     text: (T) =>
-      `Let $f(x,y)=${T.a}x^2+${T.b}y^2$. Find $f_{xx}$, $f_{yy}$, and $f_{xy}$ at $(${T.x0}, ${T.y0})$.`,
+      `Let $f(x,y)=${coef(T.a)}x^2+${coef(T.b)}y^2$. Find $f_{xx}$, $f_{yy}$, and $f_{xy}$ at $(${T.x0}, ${T.y0})$.`,
     parts: [
       num('fxx', ($) => $.fxx, '', { label: '$f_{xx}$' }),
       num('fyy', ($) => $.fyy, '', { label: '$f_{yy}$' }),
@@ -59,10 +59,10 @@ export default [
     },
     derive: ($) => ({ fxy: 2 * $.a * $.x0, fx: 2 * $.a * $.x0 * $.y0 }),
     text: (T) =>
-      `Let $f(x,y)=${T.a}x^2 y$. Find $f_{xy}$ at $(${T.x0}, ${T.y0})$.`,
+      `Let $f(x,y)=${coef(T.a)}x^2 y$. Find $f_{xy}$ at $(${T.x0}, ${T.y0})$.`,
     parts: [num('fxy', ($) => $.fxy, '', { label: '$f_{xy}$', abs: 0.02 })],
     hints: ['$f_x=2axy$, then differentiate in $y$. Or $f_y=ax^2$, then differentiate in $x$. Schwarz says the two orders match.'],
-    steps: ($, f, T) => [`$f_x=2\\cdot${T.a}xy$, so $f_{xy}=2ax=${f($.fxy)}$.`],
+    steps: ($, f, T) => [`$f_x=${prod(2, T.a)}xy$, so $f_{xy}=${prod(2, T.a)}x=${f($.fxy)}$.`],
     sim: {
       scenario: 'prod2',
       setup(slice, $) {

@@ -1,14 +1,11 @@
+import { sumTex } from './sumtex.js';
+
 /**
  * Named f(x,y,z) for the R³ partials lab. Analytic first and mixed partials are route A.
  */
 
 const P = (p) => ({ a: p?.a ?? 1, b: p?.b ?? 1, c: p?.c ?? 0 });
 
-function fmtC(c) {
-  if (c === 1) return '';
-  if (c === -1) return '-';
-  return String(c);
-}
 
 export const FIELDS3 = {
   one: {
@@ -59,14 +56,7 @@ export const FIELDS3 = {
   linear: {
     id: 'linear',
     name: 'Linear  ax+by+cz',
-    tex: (p) => {
-      const { a, b, c } = P(p);
-      const parts = [];
-      if (a) parts.push(`${fmtC(a)}x`);
-      if (b) parts.push(`${fmtC(b)}y`);
-      if (c) parts.push(`${fmtC(c)}z`);
-      return parts.join(' + ').replace(/\+ -/g, '- ') || '0';
-    },
+    tex: (p) => sumTex([[P(p).a, 'x'], [P(p).b, 'y'], [P(p).c, 'z']]),
     f: (x, y, z, p) => {
       const { a, b, c } = P(p);
       return a * x + b * y + c * z;

@@ -1,4 +1,4 @@
-import { problem, range, num, mc, tf, sym, kase, domain, DEG } from '../kit.js';
+import { problem, range, num, mc, tf, sym, kase, domain, DEG, coef, prod } from '../kit.js';
 
 const box = { xMin: -2, xMax: 2, yMin: -2, yMax: 2 };
 
@@ -45,15 +45,15 @@ export default [
     },
     derive: ($) => ({ fx: 2 * $.a * $.x0, fy: 2 * $.b * $.y0 }),
     text: (T) =>
-      `Let $f(x,y) = ${T.a}x^2 + ${T.b}y^2$. Find the first partial derivatives at $P = (${T.x0}, ${T.y0})$.`,
+      `Let $f(x,y) = ${coef(T.a)}x^2 + ${coef(T.b)}y^2$. Find the first partial derivatives at $P = (${T.x0}, ${T.y0})$.`,
     parts: [
       num('fx', ($) => $.fx, '', { label: '$\\partial f/\\partial x$ at $P$' }),
       num('fy', ($) => $.fy, '', { label: '$\\partial f/\\partial y$ at $P$' }),
     ],
     hints: ['Treat $y$ as constant to get $\\partial f/\\partial x$; treat $x$ as constant to get $\\partial f/\\partial y$.'],
     steps: ($, f, T) => [
-      `$f_x = 2\\cdot${T.a}x = ${T.a === '1' ? '2' : `2\\cdot${T.a}`}x$, so at $P$ we get $${f($.fx)}$.`,
-      `$f_y = 2\\cdot${T.b}y$, so at $P$ we get $${f($.fy)}$.`,
+      `$f_x = ${T.a === '1' ? '2x' : `2\\cdot${T.a}x = ${prod(2, T.a)}x`}$, so at $P$ we get $${f($.fx)}$.`,
+      `$f_y = ${prod(2, T.b)}y$, so at $P$ we get $${f($.fy)}$.`,
     ],
     sim: {
       scenario: 'paraboloid',
@@ -78,7 +78,7 @@ export default [
     },
     derive: ($) => ({ x: 1, y: 1, fx: $.a, fy: $.a }),
     valid: ($) => $.a !== 0,
-    text: (T) => `Let $f(x,y) = ${T.a}xy$. Write $\\partial f/\\partial x$ as a formula in $x$ and $y$.`,
+    text: (T) => `Let $f(x,y) = ${coef(T.a)}xy$. Write $\\partial f/\\partial x$ as a formula in $x$ and $y$.`,
     parts: [
       sym('fx_sym', 'a*y', ['a', 'x', 'y'], ($) => $.a * $.y, { label: '$\\partial f/\\partial x$' }),
     ],
@@ -116,7 +116,7 @@ export default [
     valid: ($) => !($.x0 === 0 && $.y0 === 0),
     derive: ($) => ({ fx: 2 * $.a * $.x0, fy: -2 * $.b * $.y0 }),
     text: (T) =>
-      `Let $f(x,y) = ${T.a}x^2 - ${T.b}y^2$. Compute $\\nabla f$ at $(${T.x0}, ${T.y0})$.`,
+      `Let $f(x,y) = ${coef(T.a)}x^2 - ${coef(T.b)}y^2$. Compute $\\nabla f$ at $(${T.x0}, ${T.y0})$.`,
     parts: [
       num('fx', ($) => $.fx, '', { label: '$\\partial f/\\partial x$' }),
       num('fy', ($) => $.fy, '', { label: '$\\partial f/\\partial y$' }),
@@ -143,12 +143,12 @@ export default [
     topics: ['gradient', 'symbolic'],
     vars: { a: range(1, 4, 1), b: range(1, 4, 1) },
     derive: ($) => ({ x: 0.5, y: 0.5, fx: 2 * $.a * 0.5, fy: 2 * $.b * 0.5 }),
-    text: (T) => `Let $f(x,y) = ${T.a}x^2 + ${T.b}y^2$. Write the $x$-component of $\\nabla f$ as a formula.`,
+    text: (T) => `Let $f(x,y) = ${coef(T.a)}x^2 + ${coef(T.b)}y^2$. Write the $x$-component of $\\nabla f$ as a formula.`,
     parts: [
       sym('gx', '2*a*x', ['a', 'b', 'x', 'y'], ($) => 2 * $.a * $.x, { label: '$(\\nabla f)_x$' }),
     ],
     hints: ['$(\\nabla f)_x = \\partial f/\\partial x$.'],
-    steps: ($, f, T) => [`$(\\nabla f)_x = 2\\cdot${T.a}x$.`],
+    steps: ($, f, T) => [`$(\\nabla f)_x = ${prod(2, T.a)}x$.`],
     sim: {
       scenario: 'paraboloid',
       setup(slice, $) {
@@ -188,7 +188,7 @@ export default [
       return { theta: th, ux, uy, fx, fy, Du: fx * ux + fy * uy };
     },
     text: (T, $) =>
-      `Let $f(x,y) = ${T.a}x + ${T.b}y$ and let $\\hat u$ make an angle $${T.deg}^\\circ$ with the positive $x$-axis. Find $D_{\\hat u} f$ at $(${T.x0}, ${T.y0})$.`,
+      `Let $f(x,y) = ${coef(T.a)}x + ${coef(T.b)}y$ and let $\\hat u$ make an angle $${T.deg}^\\circ$ with the positive $x$-axis. Find $D_{\\hat u} f$ at $(${T.x0}, ${T.y0})$.`,
     parts: [num('Du', ($) => $.Du, '', { label: '$D_{\\hat u} f$', abs: 0.02 })],
     hints: ['$D_{\\hat u} f = \\nabla f \\cdot \\hat u$, and $\\hat u = (\\cos\\theta, \\sin\\theta)$.'],
     steps: ($, f) => [`$\\nabla f = (${f($.fx)}, ${f($.fy)})$, $\\hat u = (${f($.ux)}, ${f($.uy)})$, so $D_{\\hat u} f = ${f($.Du)}$.`],
@@ -224,7 +224,7 @@ export default [
     },
     valid: ($) => $.ux !== 0 || $.uy !== 0,
     text: (T) =>
-      `Let $f(x,y) = ${T.a}x + ${T.b}y$ and $u = (${T.ux}, ${T.uy})$. The notes require a unit vector. Normalize $u$ and find $D_{\\hat u} f$ at the origin.`,
+      `Let $f(x,y) = ${coef(T.a)}x + ${coef(T.b)}y$ and $u = (${T.ux}, ${T.uy})$. The notes require a unit vector. Normalize $u$ and find $D_{\\hat u} f$ at the origin.`,
     parts: [num('Du', ($) => $.Du, '', { label: '$D_{\\hat u} f$', abs: 0.02 })],
     hints: ['$\\hat u = u/\\|u\\|$, then $D_{\\hat u} f = \\nabla f \\cdot \\hat u$. Do not plug the raw $(u_x, u_y)$ into Theorem 17.'],
     steps: ($, f) => [`$\\|u\\| = ${f($.L)}$, $\\hat u = (${f($.hx)}, ${f($.hy)})$, $D_{\\hat u} f = ${f($.Du)}$.`],
@@ -260,7 +260,7 @@ export default [
     },
     derive: ($) => ({ fx: 2 * $.a * $.x0, fy: 2 * $.b * $.y0 }),
     text: (T) =>
-      `Let $f(x,y) = ${T.a}x^2 + ${T.b}y^2$ at $P = (${T.x0}, ${T.y0})$. In which direction does $f$ increase fastest?`,
+      `Let $f(x,y) = ${coef(T.a)}x^2 + ${coef(T.b)}y^2$ at $P = (${T.x0}, ${T.y0})$. In which direction does $f$ increase fastest?`,
     parts: [
       mc(
         'dir',
@@ -327,7 +327,7 @@ export default [
       return { f0, fx, fy, z: f0 + fx * $.dx + fy * $.dy };
     },
     text: (T) =>
-      `Let $f(x,y) = ${T.a}x^2 + ${T.b}y^2$. Using the tangent plane at $(${T.x0}, ${T.y0})$, estimate $f(${T.x0}+${T.dx}, ${T.y0}+${T.dy})$.`,
+      `Let $f(x,y) = ${coef(T.a)}x^2 + ${coef(T.b)}y^2$. Using the tangent plane at $(${T.x0}, ${T.y0})$, estimate $f(${T.x0}+${T.dx}, ${T.y0}+${T.dy})$.`,
     parts: [num('z', ($) => $.z, '', { label: 'estimate', abs: 0.05 })],
     hints: ['$f(x_0+\\Delta x, y_0+\\Delta y) \\approx f(P) + f_x \\Delta x + f_y \\Delta y$.'],
     steps: ($, f) => [`$f(P) = ${f($.f0)}$, $\\nabla f = (${f($.fx)}, ${f($.fy)})$, estimate $${f($.z)}$.`],

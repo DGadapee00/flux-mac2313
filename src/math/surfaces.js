@@ -1,3 +1,5 @@
+import { sumTex } from './sumtex.js';
+
 /**
  * Named f(x,y) used by the Chapter 2 labs. Each surface carries analytic partials — route A —
  * so a lab never differentiates by hand inside a render function.
@@ -11,10 +13,7 @@ export const SURFACES = {
   paraboloid: {
     id: 'paraboloid',
     name: 'Paraboloid',
-    tex: (p) => {
-      const { a, b } = P(p);
-      return `${fmtC(a)}x^2 + ${fmtC(b)}y^2`;
-    },
+    tex: (p) => sumTex([[P(p).a, 'x^2'], [P(p).b, 'y^2']]),
     f: (x, y, p) => {
       const { a, b } = P(p);
       return a * x * x + b * y * y;
@@ -29,10 +28,7 @@ export const SURFACES = {
   saddle: {
     id: 'saddle',
     name: 'Saddle',
-    tex: (p) => {
-      const { a, b } = P(p);
-      return `${fmtC(a)}x^2 - ${fmtC(b)}y^2`;
-    },
+    tex: (p) => sumTex([[P(p).a, 'x^2'], [-P(p).b, 'y^2']]),
     f: (x, y, p) => {
       const { a, b } = P(p);
       return a * x * x - b * y * y;
@@ -47,10 +43,7 @@ export const SURFACES = {
   plane: {
     id: 'plane',
     name: 'Plane',
-    tex: (p) => {
-      const { a, b, c } = P(p);
-      return `${fmtC(a)}x + ${fmtC(b)}y + ${fmtC(c)}`;
-    },
+    tex: (p) => sumTex([[P(p).a, 'x'], [P(p).b, 'y'], [P(p).c, '']]),
     f: (x, y, p) => {
       const { a, b, c } = P(p);
       return a * x + b * y + c;
@@ -83,7 +76,7 @@ export const SURFACES = {
   xy: {
     id: 'xy',
     name: 'Product $xy$',
-    tex: (p) => `${fmtC(P(p).a)}xy`,
+    tex: (p) => sumTex([[P(p).a, 'xy']]),
     f: (x, y, p) => P(p).a * x * y,
     fx: (x, y, p) => P(p).a * y,
     fy: (x, y, p) => P(p).a * x,
@@ -134,7 +127,7 @@ export const SURFACES = {
   prod2: {
     id: 'prod2',
     name: 'x² y',
-    tex: (p) => `${fmtC(P(p).a)}x^2 y`,
+    tex: (p) => sumTex([[P(p).a, 'x^2 y']]),
     f: (x, y, p) => P(p).a * x * x * y,
     fx: (x, y, p) => 2 * P(p).a * x * y,
     fy: (x, y, p) => P(p).a * x * x,
@@ -145,11 +138,6 @@ export const SURFACES = {
   },
 };
 
-function fmtC(c) {
-  if (c === 1) return '';
-  if (c === -1) return '-';
-  return String(c);
-}
 
 export function surfaceById(id) {
   return SURFACES[id] || SURFACES.paraboloid;

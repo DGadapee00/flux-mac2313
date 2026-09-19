@@ -4,12 +4,16 @@ import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { fieldById } from '../math/fields3.js';
 import { integralSph, integralSphCart } from '../math/quadrature.js';
 import { closedBall } from '../math/triple.js';
+import { agreeTo } from '../math/agree.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
 
-function agree(a, b) {
-  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 0.03 * Math.max(1, Math.abs(a), Math.abs(b));
-}
+/*
+ * The yardstick is the integral of |f| over the same region by the same integrator — not the value
+ * of the integral, which can cancel to near zero while both routes are wrong, and not a floor of 1,
+ * which made the tolerance flatly absolute for every integral smaller than 1.
+ */
+const agree = (a, b, scale) => agreeTo(a, b, scale, { tol: 0.03 });
 
 export default defineLab({
   id: 'sph',
@@ -80,6 +84,7 @@ export default defineLab({
     const p = state.params;
     const fn = (x, y, z) => fld.f(x, y, z, p);
     const Isph = integralSph(fn, R, { n: 24 });
+    const Iabs = integralSph((x, y, z) => Math.abs(fn(x, y, z)), R, { n: 24 });
     const Icart = integralSphCart(fn, R, { n: 20 });
     const closed = closedBall(fld.id, R);
     const truth = Number.isFinite(closed) ? closed : Isph;
@@ -90,7 +95,8 @@ export default defineLab({
     computed.Icart = Icart;
     computed.closed = closed;
     computed.err = Math.abs(Isph - Icart);
-    computed.agree = agree(Isph, Icart) && agree(Isph, truth);
+    computed.Iabs = Iabs;
+    computed.agree = agree(Isph, Icart, Iabs) && agree(Isph, truth, Iabs);
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

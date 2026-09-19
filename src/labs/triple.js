@@ -5,13 +5,17 @@ import { fieldById } from '../math/fields3.js';
 import { riemann3 } from '../math/riemann.js';
 import { integral3 } from '../math/quadrature.js';
 import { closedBox } from '../math/triple.js';
+import { agreeTo } from '../math/agree.js';
 import { TRIPLE_MAX_N } from '../scene/tripleBoxes.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
 
-function agree(a, b) {
-  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 0.03 * Math.max(1, Math.abs(a), Math.abs(b));
-}
+/*
+ * The yardstick is the integral of |f| over the same region — not the value of the integral, which
+ * can cancel to near zero while both routes are wrong, and not a floor of 1, which made the
+ * tolerance flatly absolute for every integral smaller than 1.
+ */
+const agree = (a, b, scale) => agreeTo(a, b, scale, { tol: 0.03 });
 
 export default defineLab({
   id: 'triple',
@@ -98,6 +102,7 @@ export default defineLab({
     const mid = riemann3(fn, xa, xb, ya, yb, za, zb, { n });
     const Ixyz = integral3(fn, xa, xb, ya, yb, za, zb, { order: 'xyz', n: 16 });
     const Izyx = integral3(fn, xa, xb, ya, yb, za, zb, { order: 'zyx', n: 16 });
+    const Iabs = integral3((x, y, z) => Math.abs(fn(x, y, z)), xa, xb, ya, yb, za, zb, { order: 'xyz', n: 16 });
     const closed = closedBox(fld.id, xa, xb, ya, yb, za, zb);
     const truth = Number.isFinite(closed) ? closed : Ixyz;
     computed.fld = fld;
@@ -109,7 +114,8 @@ export default defineLab({
     computed.n = n;
     computed.dV = mid.dx * mid.dy * mid.dz;
     computed.err = Math.abs(mid.sum - truth);
-    computed.agree = agree(Ixyz, Izyx) && agree(Ixyz, truth);
+    computed.Iabs = Iabs;
+    computed.agree = agree(Ixyz, Izyx, Iabs) && agree(Ixyz, truth, Iabs);
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

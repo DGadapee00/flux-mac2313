@@ -4,6 +4,7 @@ import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { surfaceById } from '../math/surfaces.js';
 import { gradNumeric, dirQuotient } from '../math/ndiff.js';
 import { directional, steepestAngle, steepestSweep, wrapPi, dirFromAngle, unitize } from '../math/gradient.js';
+import { agreeTo, quotientNoise } from '../math/agree.js';
 import { FIT_MAX, sceneScale } from '../engine/frame.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { sciHTML } from '../ui/format.js';
@@ -168,6 +169,16 @@ export default defineLab({
     computed.matchG = Math.hypot(an.fx - gN.x, an.fy - gN.y);
     computed.matchD = Math.abs(Du - Dq);
     computed.matchTh = Number.isFinite(thA) ? Math.abs(wrapPi(sweep.theta - thA)) : 0;
+    /*
+     * ‖∇f‖ is the yardstick, not |D_u f|. D_u f is legitimately zero whenever û ⊥ ∇f, and on the
+     * Gaussian it is tiny everywhere away from the origin — scaling by it would make the light
+     * either impossible to satisfy or impossible to fail. ‖∇f‖ is what sets how big a disagreement
+     * between the partials and the difference quotient is allowed to be.
+     */
+    const noise = quotientNoise(an.f, 1e-5);
+    computed.agreeD = agreeTo(Du, Dq, gmag, { floor: noise });
+    computed.agreeG = agreeTo(0, computed.matchG, gmag, { floor: noise });
+    computed.agree = computed.agreeD && computed.agreeG;
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};
@@ -242,7 +253,7 @@ export default defineLab({
       ['$f(P)$', `$${fmt(computed.f)}$`],
       ['$\\|\\nabla f\\|$', `$${fmt(computed.gmag)}$`],
       ['$D_{\\hat u} f$', `$${fmt(computed.Du)}$`],
-      ['routes agree', computed.matchD < 0.02 * Math.max(1, Math.abs(computed.Du)) ? 'yes' : 'check $h$'],
+      ['routes agree', computed.agree ? 'yes' : 'check $h$'],
     ]);
   },
   coach(state, computed) {

@@ -6,7 +6,8 @@
  * Run: node src/math/selftest.js
  */
 import { add, sub, dot, cross, len, normalize, proj, det2, det3 } from './vec.js';
-import { dfdx, dfdy, d2fdx2, d2fdy2, d2fdxdy, gradNumeric, dirQuotient } from './ndiff.js';
+import { dfdx, dfdy, d2fdx2, d2fdy2, d2fdxdy, gradNumeric, dirQuotient, df1Slack } from './ndiff.js';
+import { agreeTo, quotientNoise } from './agree.js';
 import { simpson, integral2, integralPolar, integralTypeI, integralTypeII, integral3, integralCyl, integralCylCart, integralSph, integralSphCart } from './quadrature.js';
 import { SURFACES, evalSurface } from './surfaces.js';
 import { directional, steepestAngle, steepestSweep, wrapPi, unitize, dirFromAngle } from './gradient.js';
@@ -482,6 +483,41 @@ console.log('triple integrals');
   absApprox(integralSph(zf, 1, { n: 24 }), 0, 2e-3, 'sph Simpson z ≈ 0');
   const bowl = (x, y, z) => x * x + y * y + z * z;
   approx(integralSph(bowl, 1, { n: 24 }), (4 / 5) * Math.PI, 3e-3, 'sph Simpson ρ²');
+}
+
+{
+  console.log('agreement tolerance');
+  /*
+   * The rule these replaced was `|a-b| < tol * max(1, |a|, |b|)`. That floor of 1 turned a relative
+   * tolerance into a flat absolute one for every quantity below 1 — and most of what these labs
+   * display is below 1. These cases fail against that old rule and pass against the new one; if
+   * anyone reintroduces the floor, the first two turn red here instead of silently on screen.
+   */
+  const OLD = (a, b, tol = 0.02) => Math.abs(a - b) < tol * Math.max(1, Math.abs(a), Math.abs(b));
+
+  // D_u f on the Gaussian at (−2,−2): a 10% error, invisible to the old rule.
+  const Du = 6.617e-4;
+  const wrong = Du * 1.1;
+  const gmag = 1.87e-3;
+  ok(OLD(Du, wrong), 'old rule passes a 10% error on a small D_u f (the bug)');
+  ok(!agreeTo(Du, wrong, gmag), 'new rule catches it, scaled by ||grad f||');
+  ok(agreeTo(Du, Du * 1.001, gmag), 'and still passes a 0.1% difference');
+
+  // An integral of 0.2 with a 12% disagreement: the same blindness on the quadrature labs.
+  ok(OLD(0.2, 0.225, 0.03), 'old rule passes a 12% disagreement on a small integral');
+  ok(!agreeTo(0.2, 0.225, 0.2, { tol: 0.03 }), 'new rule catches it, scaled by the integral of |f|');
+
+  // A quantity that legitimately cancels to zero must stay satisfiable.
+  ok(agreeTo(0, 0, 0), 'two exact zeros agree');
+  ok(agreeTo(0, 1e-17, 0, { floor: quotientNoise(1, 1e-5) }), 'floating-point dust is not a disagreement');
+  ok(!agreeTo(0, 0.5, 0), 'but a real difference against a zero scale is');
+  ok(!agreeTo(NaN, 1, 1) && !agreeTo(1, Infinity, 1), 'non-finite never agrees');
+
+  // The measured truncation floor: f'(0) = 0 for x³ while the quotient returns h².
+  const cube = (x) => x * x * x;
+  const slack = df1Slack(cube, 0);
+  ok(slack > 0 && slack < 1e-8, 'df1Slack bounds the quotient truncation at x^3');
+  ok(agreeTo(0, dirQuotient((x) => cube(x), 0, 0, 1, 0), 0, { floor: slack }), 'x^3 at 0 agrees within that floor');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

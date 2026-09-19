@@ -4,12 +4,17 @@ import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { surfaceById } from '../math/surfaces.js';
 import { integral2, integralTypeI, integralTypeII, simpson } from '../math/quadrature.js';
 import { closedRect, closedDisk, closedTriangle, diskTypeI, diskTypeII, triangleBounds, parabolaBounds } from '../math/double.js';
+import { agreeTo } from '../math/agree.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.02 * Math.max(1, Math.abs(a), Math.abs(b));
-}
+/*
+ * The yardstick for "do the two orders agree?" is ∬|f| over the same region, computed by the same
+ * integrator — not the value of the integral itself, which can cancel to near zero while both
+ * routes are badly wrong, and not a floor of 1, which made the tolerance flatly absolute for every
+ * integral smaller than 1.
+ */
+const agree = (a, b, scale) => agreeTo(a, b, scale);
 
 function bounds(state) {
   if (state.region === 'disk') {
@@ -150,12 +155,15 @@ export default defineLab({
     const order = state.order === 'yx' ? 'yx' : 'xy';
     state.order = order;
 
+    const afn = (x, y) => Math.abs(fn(x, y));
     let Ixy;
     let Iyx;
+    let Iabs;
     let closed = NaN;
     if (b.kind === 'rect') {
       Ixy = integral2(fn, b.xa, b.xb, b.ya, b.yb, { order: 'xy', n: 64 });
       Iyx = integral2(fn, b.xa, b.xb, b.ya, b.yb, { order: 'yx', n: 64 });
+      Iabs = integral2(afn, b.xa, b.xb, b.ya, b.yb, { order: 'xy', n: 64 });
       closed = closedRect(surf.id, b.xa, b.xb, b.ya, b.yb, p);
       state.xMin = b.xa;
       state.xMax = b.xb;
@@ -164,6 +172,7 @@ export default defineLab({
     } else if (b.kind === 'disk') {
       Ixy = integralTypeI(fn, b.xa, b.xb, b.yLo, b.yHi, { n: 80 });
       Iyx = integralTypeII(fn, b.typeII.ya, b.typeII.yb, b.typeII.xLo, b.typeII.xHi, { n: 80 });
+      Iabs = integralTypeI(afn, b.xa, b.xb, b.yLo, b.yHi, { n: 80 });
       closed = closedDisk(surf.id, b.R, p);
       state.xMin = -b.R;
       state.xMax = b.R;
@@ -173,6 +182,7 @@ export default defineLab({
     } else {
       Ixy = integralTypeI(fn, b.xa, b.xb, b.yLo, b.yHi, { n: 80 });
       Iyx = b.xLo ? integralTypeII(fn, b.ya, b.yb, b.xLo, b.xHi, { n: 80 }) : NaN;
+      Iabs = integralTypeI(afn, b.xa, b.xb, b.yLo, b.yHi, { n: 80 });
       if (state.region === 'triangle') closed = closedTriangle(surf.id, p);
       state.xMin = b.xa;
       state.xMax = b.xb;
@@ -215,7 +225,8 @@ export default defineLab({
     computed.f = fP;
     computed.order = order;
     const a = Number.isFinite(closed) ? closed : Ixy;
-    computed.agree = agree(Ixy, Iyx) && (!Number.isFinite(closed) || agree(Ixy, closed));
+    computed.Iabs = Iabs;
+    computed.agree = agree(Ixy, Iyx, Iabs) && (!Number.isFinite(closed) || agree(Ixy, closed, Iabs));
     computed.truth = a;
   },
   syncViews(state, computed, ctx) {

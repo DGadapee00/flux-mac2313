@@ -1,4 +1,4 @@
-import { problem, range, num, mc, tf, kase, domain, DEG } from '../kit.js';
+import { problem, range, num, mc, tf, kase, domain, DEG, coef, prod } from '../kit.js';
 
 const plane = { xMin: -2.5, xMax: 2.5, yMin: -2.5, yMax: 2.5 };
 
@@ -293,7 +293,7 @@ export default [
     vars: { a: range(1, 3, 1), b: range(1, 3, 1) },
     derive: () => ({ x: 0, y: 0 }),
     text: (T) =>
-      `Let $f(x,y)=${T.a}x^2+${T.b}y^2$. Find the critical point $(x,y)$.`,
+      `Let $f(x,y)=${coef(T.a)}x^2+${coef(T.b)}y^2$. Find the critical point $(x,y)$.`,
     parts: [
       num('x', ($) => $.x, '', { label: '$x$', abs: 0.02 }),
       num('y', ($) => $.y, '', { label: '$y$', abs: 0.02 }),

@@ -52,6 +52,19 @@ export const sym = (id, expr, vars, get, o = {}) => ({
 
 export const self = (id, prompt, rubric) => ({ id, kind: 'self', label: prompt, rubric });
 
+/**
+ * A coefficient written directly in front of a variable: `1x^2` and `-1y` are not how anyone writes
+ * mathematics, and with `range(1, 3, 1)` a third of the generated instances land on 1. Mirrors
+ * fmtC() in math/surfaces.js, which does the same job for the labs' own f(x,y) titles.
+ */
+export const coef = (c) => (String(c) === '1' ? '' : String(c) === '-1' ? '-' : String(c));
+
+/** The same, for a coefficient that is itself a product: prod(2, '1') is '2', not '2\\cdot1'. */
+export const prod = (k, c) => {
+  const n = Number(c);
+  return Number.isFinite(n) ? String(k * n) : `${k}\\cdot${c}`;
+};
+
 export function problem(spec) {
   return {
     level: 1,

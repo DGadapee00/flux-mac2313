@@ -4,14 +4,18 @@ import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { surfaceById } from '../math/surfaces.js';
 import { riemannRect } from '../math/riemann.js';
 import { closedRect } from '../math/double.js';
+import { agreeTo } from '../math/agree.js';
 import { integral2 } from '../math/quadrature.js';
 import { RIEMANN_MAX_N } from '../scene/riemann.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.03 * Math.max(1, Math.abs(a), Math.abs(b));
-}
+/*
+ * The yardstick is the integral of |f| over the same region — not the value of the integral, which
+ * can cancel to near zero while both routes are wrong, and not a floor of 1, which made the
+ * tolerance flatly absolute for every integral smaller than 1.
+ */
+const agree = (a, b, scale) => agreeTo(a, b, scale, { tol: 0.03 });
 
 export default defineLab({
   id: 'riemann',
@@ -110,6 +114,7 @@ export default defineLab({
     const yb = state.yMax;
     const mid = riemannRect(fn, xa, xb, ya, yb, { nx: n, ny: n, sample });
     const simp = integral2(fn, xa, xb, ya, yb, { order: 'xy', n: 64 });
+    const Iabs = integral2((x, y) => Math.abs(fn(x, y)), xa, xb, ya, yb, { order: 'xy', n: 64 });
     const closed = closedRect(surf.id, xa, xb, ya, yb, p);
     const truth = Number.isFinite(closed) ? closed : simp;
     computed.surf = surf;
@@ -123,7 +128,8 @@ export default defineLab({
     computed.n = n;
     computed.sample = sample;
     computed.err = Math.abs(mid.sum - truth);
-    computed.agree = agree(mid.sum, truth);
+    computed.Iabs = Iabs;
+    computed.agree = agree(mid.sum, truth, Iabs);
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

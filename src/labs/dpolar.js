@@ -4,14 +4,18 @@ import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { surfaceById } from '../math/surfaces.js';
 import { riemannPolar } from '../math/riemann.js';
 import { closedDisk, diskTypeI } from '../math/double.js';
+import { agreeTo } from '../math/agree.js';
 import { integralPolar, integralTypeI } from '../math/quadrature.js';
 import { RIEMANN_MAX_N } from '../scene/riemann.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.03 * Math.max(1, Math.abs(a), Math.abs(b));
-}
+/*
+ * The yardstick is the integral of |f| over the same region by the same integrator — not the value
+ * of the integral, which can cancel to near zero while both routes are wrong, and not a floor of 1,
+ * which made the tolerance flatly absolute for every integral smaller than 1.
+ */
+const agree = (a, b, scale) => agreeTo(a, b, scale, { tol: 0.03 });
 
 export default defineLab({
   id: 'dpolar',
@@ -104,6 +108,7 @@ export default defineLab({
     const fn = (x, y) => surf.f(x, y, p);
     const polarF = (r, th) => fn(r * Math.cos(th), r * Math.sin(th));
     const Ipolar = integralPolar(polarF, 0, R, 0, 2 * Math.PI, { n: 80 });
+    const Iabs = integralPolar((r, th) => Math.abs(polarF(r, th)), 0, R, 0, 2 * Math.PI, { n: 80 });
     const d = diskTypeI(R);
     const Icart = integralTypeI(fn, d.xa, d.xb, d.yLo, d.yHi, { n: 80 });
     const rsum = riemannPolar(fn, R, { nr, nth, sample: 'mid' });
@@ -123,7 +128,8 @@ export default defineLab({
     computed.rsum = rsum.sum;
     computed.closed = closed;
     computed.err = Math.abs(Ipolar - Icart);
-    computed.agree = agree(Ipolar, Icart) && agree(Ipolar, truth);
+    computed.Iabs = Iabs;
+    computed.agree = agree(Ipolar, Icart, Iabs) && agree(Ipolar, truth, Iabs);
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

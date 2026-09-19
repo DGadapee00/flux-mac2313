@@ -2,13 +2,11 @@ import * as THREE from 'three';
 import { defineLab, planeCamera } from './define.js';
 import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { graphById } from '../math/graphs1.js';
-import { df1, df1left, df1right } from '../math/ndiff.js';
+import { df1, df1left, df1right, df1Slack } from '../math/ndiff.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { agreeTo, quotientNoise } from '../math/agree.js';
 
-function agree(a, b) {
-  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 0.03 * Math.max(1, Math.abs(a), Math.abs(b));
-}
 
 function keepXy(state) {
   state.view = { ...(state.view || {}), plane: 'xy', upm: state.view?.upm || 1 };
@@ -123,9 +121,30 @@ export default defineLab({
     const hLim = 1e-4;
     const fL = g.f(x0 - hLim);
     const fR = g.f(x0 + hLim);
-    const lim = Number.isFinite(fL) && Number.isFinite(fR) && Math.abs(fL - fR) < 0.02 * Math.max(1, Math.abs(fL), Math.abs(fR)) ? 0.5 * (fL + fR) : NaN;
-    const cont = Number.isFinite(f0) && Number.isFinite(lim) && Math.abs(f0 - lim) < 0.02 * Math.max(1, Math.abs(lim));
-    const diffble = Number.isFinite(fp) && Number.isFinite(leftD) && Number.isFinite(rightD) && Math.abs(leftD - rightD) < 0.05 * Math.max(1, Math.abs(leftD), Math.abs(rightD));
+    /*
+     * These three decide what the coach asserts about f — that a limit exists, that f is continuous
+     * at x0, that f'(x0) exists — so their yardsticks matter more than a status light's. They are
+     * the function's own vertical scale over the visible window, and the steepness of the one-sided
+     * derivatives. A floor of 1, as these carried, called any jump smaller than 0.02 "continuous"
+     * no matter how small the function itself was.
+     */
+    let fScale = 0;
+    for (let i = 0; i <= 200; i++) {
+      const v = g.f(a + ((b - a) * i) / 200);
+      if (Number.isFinite(v)) fScale = Math.max(fScale, Math.abs(v));
+    }
+    const slopeScale = Math.max(Math.abs(leftD), Math.abs(rightD), Math.abs(fp) || 0);
+    const jumpFloor = quotientNoise(fScale, 1, 1);
+    const lim =
+      Number.isFinite(fL) && Number.isFinite(fR) && agreeTo(fL, fR, fScale, { floor: jumpFloor })
+        ? 0.5 * (fL + fR)
+        : NaN;
+    const cont = Number.isFinite(f0) && Number.isFinite(lim) && agreeTo(f0, lim, fScale, { floor: jumpFloor });
+    const diffble =
+      Number.isFinite(fp) &&
+      Number.isFinite(leftD) &&
+      Number.isFinite(rightD) &&
+      agreeTo(leftD, rightD, slopeScale, { tol: 0.05, floor: quotientNoise(fScale, 1e-5, 1) });
     const yDraw = Number.isFinite(f0) ? f0 : Number.isFinite(lim) ? lim : 0;
     state.probe = { x: x0, y: yDraw, z: 0 };
     computed.g = g;
@@ -139,7 +158,15 @@ export default defineLab({
     computed.cont = cont;
     computed.diffble = diffble;
     computed.yDraw = yDraw;
-    computed.agree = agree(fp, dq);
+    /*
+     * The floor is whichever of the quotient's two error sources dominates here: rounding, ε|f|/h,
+     * or truncation, measured by doubling the step. Without the second, x³ at the origin reads as a
+     * disagreement — f'(0) is exactly 0 while the quotient returns h².
+     */
+    computed.agree = agreeTo(fp, dq, slopeScale, {
+      tol: 0.03,
+      floor: Math.max(quotientNoise(fScale, 1e-5, 1), df1Slack(g.f, x0)),
+    });
     computed.hVis = hVis;
   },
   syncViews(state, computed, ctx) {

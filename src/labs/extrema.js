@@ -7,6 +7,7 @@ import { d2fdx2, d2fdy2, d2fdxdy } from '../math/ndiff.js';
 import { FIT_MAX, sceneScale } from '../engine/frame.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { agreeTo, quotientNoise } from '../math/agree.js';
 
 function clampDomain(s) {
   const lim = (FIT_MAX - 0.05) / sceneScale();
@@ -135,6 +136,16 @@ export default defineLab({
     computed.gmag = an.gmag;
     computed.pts = pts;
     computed.matchD = Math.abs(an.D - DN);
+    /*
+     * D = f_xx f_yy − f_xy² is a difference of products, and the whole point of the second
+     * derivative test is the case D = 0, where it is inconclusive. Scaling by |D| there would make
+     * the light unsatisfiable; the floor of 1 it used to carry made it unfailable. The size of the
+     * terms is what says how big a disagreement matters.
+     */
+    computed.agree = agreeTo(an.D, DN, Math.abs(an.fxx * an.fyy) + an.fxy * an.fxy, {
+      tol: 0.05,
+      floor: quotientNoise(computed.f, 1e-4, 2),
+    });
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};
@@ -199,7 +210,7 @@ export default defineLab({
       ['$\\|\\nabla f\\|$', `$${fmt(computed.gmag)}$`],
       ['$D$', `$${fmt(computed.D)}$`],
       ['test', computed.critical ? kindLabel(computed.kind) : 'not critical'],
-      ['routes agree', computed.matchD < 0.05 * Math.max(1, Math.abs(computed.D)) ? 'yes' : 'check $h$'],
+      ['routes agree', computed.agree ? 'yes' : 'check $h$'],
     ]);
   },
   coach(state, computed) {

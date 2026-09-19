@@ -5,10 +5,8 @@ import { fieldById } from '../math/fields3.js';
 import { d2fdxdy3, d2fdydx3, d2fdxdz3, d2fdydz3, gradNumeric3 } from '../math/ndiff.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { agreeTo, quotientNoise } from '../math/agree.js';
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.02 * Math.max(1, Math.abs(a), Math.abs(b));
-}
 
 function fmtP(n) {
   if (Number.isFinite(n) && Math.abs(n) < 1e-8) return '0';
@@ -149,14 +147,18 @@ export default defineLab({
     computed.fyzN = fyzN;
     computed.gmag = gmag;
     computed.critical = gmag < 1e-8;
+    // ‖∇f‖ for the first partials, the largest mixed partial for the second ones; see partials.js.
+    const g2 = Math.max(Math.abs(fxy), Math.abs(fxz), Math.abs(fyz), Math.abs(fxyN));
+    const n1 = quotientNoise(computed.f, 1e-5, 1);
+    const n2 = quotientNoise(computed.f, 1e-4, 2);
     computed.agree =
-      agree(fx, gN.x) &&
-      agree(fy, gN.y) &&
-      agree(fz, gN.z) &&
-      agree(fxy, fxyN) &&
-      agree(fxyN, fyxN) &&
-      agree(fxz, fxzN) &&
-      agree(fyz, fyzN);
+      agreeTo(fx, gN.x, gmag, { floor: n1 }) &&
+      agreeTo(fy, gN.y, gmag, { floor: n1 }) &&
+      agreeTo(fz, gN.z, gmag, { floor: n1 }) &&
+      agreeTo(fxy, fxyN, g2, { floor: n2 }) &&
+      agreeTo(fxyN, fyxN, g2, { floor: n2 }) &&
+      agreeTo(fxz, fxzN, g2, { floor: n2 }) &&
+      agreeTo(fyz, fyzN, g2, { floor: n2 });
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

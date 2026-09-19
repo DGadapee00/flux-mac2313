@@ -3,6 +3,15 @@ export function df1(f, x, h = 1e-5) {
   return (f(x + h) - f(x - h)) / (2 * h);
 }
 
+/**
+ * How far the central quotient moves when the step doubles. Its truncation error scales as h², so
+ * this difference is a measured bound on that error rather than a guessed constant — use it as the
+ * floor when asking whether an analytic derivative and its difference quotient agree. Below it the
+ * quotient simply is not accurate enough for the gap between them to mean anything: at x³ near the
+ * origin the quotient returns h² where f'(x) is exactly 0, which is the method, not a mistake.
+ */
+export const df1Slack = (f, x, h = 1e-5) => Math.abs(df1(f, x, 2 * h) - df1(f, x, h));
+
 export function df1left(f, x, h = 1e-5) {
   return (f(x) - f(x - h)) / h;
 }
@@ -42,7 +51,10 @@ export function gradNumeric(f, x, y, h = 1e-5) {
  * `ux, uy` are the components of a unit vector.
  */
 export function dirQuotient(f, x, y, ux, uy, h = 1e-5) {
-  return (f(x + h * ux, y + h * uy) - f(x, y)) / h;
+  // Symmetric, like every other quotient in this file. Def 25 writes the one-sided form, but it is
+  // the same limit and the one-sided version carries O(h) error: at a critical point it returns h
+  // instead of 0, which is a real disagreement with grad f . u and not one a student should chase.
+  return (f(x + h * ux, y + h * uy) - f(x - h * ux, y - h * uy)) / (2 * h);
 }
 
 /** Central first and mixed partials of f(x,y,z). */

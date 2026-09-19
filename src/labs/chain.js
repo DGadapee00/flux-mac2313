@@ -14,10 +14,8 @@ import {
 import { gradNumeric } from '../math/ndiff.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { agreeTo, quotientNoise } from '../math/agree.js';
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.02 * Math.max(1, Math.abs(a), Math.abs(b));
-}
 
 function clampT(state) {
   const lo = Number.isFinite(state.t0) ? state.t0 : 0;
@@ -185,7 +183,20 @@ export default defineLab({
       computed.hsN = hsN;
       computed.htN = htN;
       computed.gp = an.ht;
-      computed.agree = agree(an.hs, hsQ) && agree(an.ht, htQ) && agree(an.hs, hsN) && agree(an.ht, htN);
+      /*
+       * The yardstick is the size of the chain rule's own terms, |f_x x_s| + |f_y y_s|, not the
+       * size of their sum. The sum is exactly what cancels — at a point where f_x x_s ≈ −f_y y_s
+       * the derivative is near zero while both terms are large, and that is precisely where a sign
+       * error hides.
+       */
+      const sS = Math.abs(an.fx * an.xs) + Math.abs(an.fy * an.ys);
+      const sT = Math.abs(an.fx * an.xt) + Math.abs(an.fy * an.yt);
+      const nq = quotientNoise(an.h, 1e-5, 1);
+      computed.agree =
+        agreeTo(an.hs, hsQ, sS, { floor: nq }) &&
+        agreeTo(an.ht, htQ, sT, { floor: nq }) &&
+        agreeTo(an.hs, hsN, sS, { floor: nq }) &&
+        agreeTo(an.ht, htN, sT, { floor: nq });
       return;
     }
 
@@ -209,7 +220,11 @@ export default defineLab({
     computed.gp = an.gp;
     computed.gpQ = gpQ;
     computed.gpN = gpN;
-    computed.agree = agree(an.gp, gpQ) && agree(an.gp, gpN);
+    // Same yardstick as the two-variable branch: the size of the terms, not of their sum.
+    const sT1 = Math.abs(an.fx * an.xp) + Math.abs(an.fy * an.yp);
+    const nq1 = quotientNoise(an.g, 1e-5, 1);
+    computed.agree =
+      agreeTo(an.gp, gpQ, sT1, { floor: nq1 }) && agreeTo(an.gp, gpN, sT1, { floor: nq1 });
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

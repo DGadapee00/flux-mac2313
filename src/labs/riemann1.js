@@ -2,15 +2,19 @@ import * as THREE from 'three';
 import { defineLab, planeCamera } from './define.js';
 import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { graphById, graphPolyline, graphSpeed } from '../math/graphs1.js';
+import { agreeTo } from '../math/agree.js';
 import { riemann1d } from '../math/riemann.js';
 import { simpson } from '../math/quadrature.js';
 import { GRAPH_BARS_MAX_N } from '../scene/graphBars.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
 
-function agree(a, b) {
-  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 0.03 * Math.max(1, Math.abs(a), Math.abs(b));
-}
+/*
+ * The yardstick is the integral of |f| over the same interval — not the value of the integral,
+ * which can cancel to near zero while both routes are wrong, and not a floor of 1, which made the
+ * tolerance flatly absolute for every integral smaller than 1.
+ */
+const agree = (a, b, scale) => agreeTo(a, b, scale, { tol: 0.03 });
 
 function keepXy(state) {
   state.view = { ...(state.view || {}), plane: 'xy', upm: state.view?.upm || 1 };
@@ -120,6 +124,7 @@ export default defineLab({
     const right = riemann1d(g.f, a, b, { n, sample: 'right' });
     const chosen = sample === 'left' ? left : sample === 'right' ? right : mid;
     const Isimp = simpson(g.f, a, b);
+    const Iabs = simpson((x) => Math.abs(g.f(x)), a, b);
     const Iclosed = g.F ? g.F(b) - g.F(a) : NaN;
     const truth = Number.isFinite(Iclosed) ? Iclosed : Isimp;
     const Lsimp = simpson((x) => graphSpeed(g, x, a, b), a, b);
@@ -138,8 +143,15 @@ export default defineLab({
     computed.Lsimp = Lsimp;
     computed.Lpoly = Lpoly;
     computed.err = Math.abs(chosen.sum - truth);
-    computed.agree = agree(chosen.sum, truth) || n >= 16;
-    computed.agreeL = agree(Lsimp, Lpoly);
+    computed.Iabs = Iabs;
+    /*
+     * A Riemann sum against the exact integral is a convergence check, not two equal-accuracy
+     * routes: at coarse n the sum is honestly different, and the readout already says "raise n".
+     * This used to read `|| n >= 16`, which forced the light green past that n whatever the sum
+     * did — the one state where a student is most likely to be looking at a wrong number.
+     */
+    computed.agree = agree(chosen.sum, truth, Iabs);
+    computed.agreeL = agree(Lsimp, Lpoly, Math.abs(Lsimp));
     computed.truth = truth;
   },
   syncViews(state, computed, ctx) {

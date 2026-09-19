@@ -69,7 +69,12 @@ if (!Number.isFinite(first.f)) fail.push('f not finite');
 if (Math.abs(first.Du - first.Dq) > 0.05 * Math.max(1, Math.abs(first.Du))) fail.push(`Du ${first.Du} vs Dq ${first.Dq}`);
 if (saddle.scenario !== 'saddle') fail.push(`scenario ${saddle.scenario}`);
 if (!practiceOpen) fail.push('practice did not open');
-if (back !== '#/ch1') fail.push(`back hash ${back}`);
+/*
+ * Back lands on the unit's first lab, not on the bare unit hash: parseHash() resolves `#/ch1` to
+ * exam.labs[0] and boot normalizes the URL with replaceState, so `#/ch1` is never what a history
+ * entry holds. This asserted `#/ch1` and had never passed.
+ */
+if (back !== '#/ch1/limits') fail.push(`back hash ${back}`);
 if (errors.length) fail.push(`page errors: ${errors.join(' | ')}`);
 
 console.log({ first, saddle, afterTh, practiceOpen, phone, back, errors });

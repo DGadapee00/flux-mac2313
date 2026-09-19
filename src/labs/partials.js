@@ -6,6 +6,7 @@ import { dfdx, dfdy, d2fdx2, d2fdy2, d2fdxdy } from '../math/ndiff.js';
 import { FIT_MAX, sceneScale } from '../engine/frame.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { agreeTo, quotientNoise } from '../math/agree.js';
 
 function clampDomain(s) {
   const lim = (FIT_MAX - 0.05) / sceneScale();
@@ -17,9 +18,6 @@ function clampDomain(s) {
   s.probe.y = fix(s.probe.y, s.yMin, s.yMax);
 }
 
-function agree(a, b) {
-  return Math.abs(a - b) < 0.02 * Math.max(1, Math.abs(a), Math.abs(b));
-}
 
 function fmtP(n) {
   if (Number.isFinite(n) && Math.abs(n) < 1e-8) return '0';
@@ -154,8 +152,22 @@ export default defineLab({
     computed.matchFy = Math.abs(fy - fyN);
     computed.matchFxy = Math.abs(fxy - fxyN);
     computed.matchSchwarz = Math.abs(fxyFromFx - fyxFromFy);
+    /*
+     * Two yardsticks, because first and second partials live at different magnitudes: ‖∇f‖ for the
+     * first, the largest second partial for the mixed ones. Each carries the rounding floor of the
+     * quotient that produced it — a second difference divides by h², so its noise is that much
+     * larger. Scaling by the compared value instead would make every near-zero partial either
+     * impossible to match or impossible to fail.
+     */
+    const g1 = Math.hypot(fx, fy);
+    const g2 = Math.max(Math.abs(fxx), Math.abs(fyy), Math.abs(fxy));
+    const n1 = quotientNoise(computed.f, 1e-5, 1);
+    const n2 = quotientNoise(computed.f, 1e-4, 2);
     computed.agree =
-      agree(fx, fxN) && agree(fy, fyN) && agree(fxy, fxyN) && agree(fxyFromFx, fyxFromFy);
+      agreeTo(fx, fxN, g1, { floor: n1 }) &&
+      agreeTo(fy, fyN, g1, { floor: n1 }) &&
+      agreeTo(fxy, fxyN, g2, { floor: n2 }) &&
+      agreeTo(fxyFromFx, fyxFromFy, g2, { floor: n2 });
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};

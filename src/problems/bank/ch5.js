@@ -202,7 +202,7 @@ export default [
       `Let $f=z$ on the cylinder $x^2+y^2\\le 1$, $z\\in[0,2]$. Find $\\iiint f\\,dV$.`,
     parts: [num('I', ($) => $.I, '', { label: '$\\iiint$', abs: 0.08 })],
     hints: ['Base area $\\pi$, $\\int_0^2 z\\,dz=2$, so the integral is $2\\pi$.'],
-    steps: () => ['$\\pi R^2 \\cdot \\tfrac12(2^2-0)=2\\pi$.'],
+    steps: () => ['$\\iiint z\\,dV = \\pi R^2 \\cdot \\tfrac12\\bigl(z_1^2-z_0^2\\bigr) = \\pi \\cdot \\tfrac12 \\cdot 2^2 = 2\\pi$.'],
     sim: {
       scenario: 'z',
       setup(slice) {
