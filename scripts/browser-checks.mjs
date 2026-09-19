@@ -10,6 +10,20 @@
  */
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+
+/*
+ * Run vite through Node against its own entry script rather than through `npx`. On Windows npx is
+ * npx.cmd, and spawn() without a shell will not resolve a .cmd — the script died with
+ * `spawn npx ENOENT` there while working on Linux. Resolving the package means no shell, no PATH
+ * lookup, and no quoting rules that differ between platforms.
+ */
+const VITE = path.join(
+  path.dirname(createRequire(import.meta.url).resolve('vite/package.json')),
+  'bin',
+  'vite.js',
+);
 
 const PORT = 5175;
 const wanted = process.argv.slice(2);
@@ -33,9 +47,9 @@ const reachable = async () => {
   }
 };
 
-await run('npx', ['vite', 'build']);
+await run(process.execPath, [VITE, 'build']);
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
+const server = spawn(process.execPath, [VITE, 'preview', '--port', String(PORT), '--strictPort'], {
   stdio: ['ignore', 'pipe', 'inherit'],
 });
 server.stdout.resume();
@@ -55,15 +69,19 @@ let failed = 0;
 for (const script of checks) {
   console.log(`\n--- ${script} ---`);
   try {
-    await run('node', [script]);
+    await run(process.execPath, [script]);
   } catch (e) {
     failed += 1;
     console.error(String(e.message));
   }
 }
 
+// Wait for the server to actually go, but never hang on it: if it has already exited, `once` would
+// never resolve, which is what left this script warning about an unsettled top-level await.
 server.kill();
-await once(server, 'exit').catch(() => {});
+if (server.exitCode === null && server.signalCode === null) {
+  await Promise.race([once(server, 'exit'), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
+}
 if (failed) {
   console.error(`\nbrowser-checks: ${failed} failed`);
   process.exit(1);
