@@ -19,6 +19,7 @@ export const SCENARIOS = {
     { id: 'cube', name: 'x³ on [0,1]', graphId: 'cube', a: 0, b: 1, n: 6, sample: 'mid', xMin: -0.2, xMax: 1.2, yMin: -0.2, yMax: 1.4 },
     { id: 'abs', name: '|x| on [0,1]', graphId: 'abs', a: 0, b: 1, n: 6, sample: 'mid', xMin: -0.2, xMax: 1.2, yMin: -0.2, yMax: 1.4 },
     { id: 'semi', name: 'Semicircle  √(1−x²)', graphId: 'semi', a: -1, b: 1, n: 8, sample: 'mid', xMin: -1.3, xMax: 1.3, yMin: -0.2, yMax: 1.3 },
+    { id: 'cube-neg', name: 'x³ on [−1,1]  — signed', graphId: 'cube', a: -1, b: 1, n: 8, sample: 'mid', xMin: -1.3, xMax: 1.3, yMin: -1.4, yMax: 1.4 },
   ],
   gradient: [
     { id: 'paraboloid', name: 'Paraboloid  x² + y²', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, probe: { x: 1, y: 0.6 }, theta: 0.4, ...DOMAIN },
@@ -64,6 +65,7 @@ export const SCENARIOS = {
     { id: 'xy-rect', name: 'xy on [0,2]×[0,1]', surfaceId: 'xy', params: { a: 1, b: 1, c: 0 }, n: 4, sample: 'mid', xMin: 0, xMax: 2, yMin: 0, yMax: 1 },
     { id: 'plane', name: 'x + 2y on [0,1]²', surfaceId: 'plane', params: { a: 1, b: 2, c: 0 }, n: 4, sample: 'mid', xMin: 0, xMax: 1, yMin: 0, yMax: 1 },
     { id: 'para-big', name: 'x² + y² on [0,2]²', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, n: 6, sample: 'mid', xMin: 0, xMax: 2, yMin: 0, yMax: 2 },
+    { id: 'saddle', name: 'x² − y² on [−1,1]²  — signed', surfaceId: 'saddle', params: { a: 1, b: 1, c: 0 }, n: 6, sample: 'mid', xMin: -1, xMax: 1, yMin: -1, yMax: 1 },
   ],
   iterated: [
     { id: 'para-sq', name: 'x² + y² on [0,1]²', surfaceId: 'paraboloid', region: 'rect', params: { a: 1, b: 1, c: 0 }, order: 'xy', probe: { x: 0.4, y: 0.4 }, xMin: 0, xMax: 1, yMin: 0, yMax: 1 },
@@ -74,7 +76,7 @@ export const SCENARIOS = {
     { id: 'triangle-xy', name: 'xy on the triangle', surfaceId: 'xy', region: 'triangle', params: { a: 1, b: 1, c: 0 }, order: 'xy', probe: { x: 0.3, y: 0.2 }, xMin: 0, xMax: 1, yMin: 0, yMax: 1 },
   ],
   dpolar: [
-    { id: 'area', name: 'Area of D_R  (f=1)', surfaceId: 'one', params: { a: 1, b: 1, c: 0 }, R: 1, n: 6 },
+    { id: 'area', name: 'Area of D_R  (f=1)', surfaceId: 'one', params: { a: 1, b: 1, c: 0 }, R: 1, n: 4 },
     { id: 'para', name: 'x² + y² on D_R', surfaceId: 'paraboloid', params: { a: 1, b: 1, c: 0 }, R: 1, n: 6 },
     { id: 'xy', name: 'xy on D_R  (odd → 0)', surfaceId: 'xy', params: { a: 1, b: 1, c: 0 }, R: 1.2, n: 6 },
     { id: 'gauss', name: 'Gaussian bump on D_R', surfaceId: 'gaussian', params: { a: 1, b: 1, c: 0 }, R: 1.4, n: 6 },

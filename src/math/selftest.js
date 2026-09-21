@@ -16,6 +16,21 @@ import { CURVES, evalCurve, polylineLength } from './curves.js';
 import { hessian, classify } from './extrema.js';
 import { chainAlong, gQuotient, chainMap, hQuotientS, hQuotientT, INNERS } from './chain.js';
 import { riemannRect, riemannPolar, riemann1d, riemann3 } from './riemann.js';
+import {
+  rectCell,
+  rectPartial,
+  barPartial,
+  polarCell,
+  polarPartial,
+  polarArea,
+  boxCell,
+  boxPartial,
+  sphMath,
+  polMath,
+  sphVolume,
+  polarRectCorners,
+} from './terms.js';
+import { setFrame, mathToWorld } from '../engine/frame.js';
 import { GRAPHS, graphPolyline, graphSpeed } from './graphs1.js';
 import { df1, df1left, df1right } from './ndiff.js';
 import { closedBox, closedCyl, closedBall } from './triple.js';
@@ -356,6 +371,34 @@ console.log('double Riemann sums and regions');
   approx(closedDisk('one', 2), 4 * Math.PI, 1e-12, 'area of D_2 = 4π');
   approx(closedDisk('xy', 1), 0, 1e-12, '∬ xy on a disk is 0');
   approx(closedDisk('gaussian', 1), Math.PI * (1 - Math.exp(-1)), 1e-12, 'gaussian disk closed form');
+
+  const cell0 = rectCell(0, 1, 0, 1, 2, 2, 0, 'mid');
+  approx(cell0.x, 0.25, 1e-12, 'rect cell 0 sample x');
+  approx(cell0.y, 0.25, 1e-12, 'rect cell 0 sample y');
+  approx(cell0.dA, 0.25, 1e-12, 'rect cell area Δx Δy');
+  const parts = rectPartial(f, 0, 1, 0, 1, 2, 2, 'mid', 4);
+  approx(parts.sum, n2.sum, 1e-12, 'partial sum of every cell is the Riemann sum');
+  const neg = rectPartial(() => -1, 0, 1, 0, 1, 2, 2, 'mid', 4);
+  approx(neg.sum, -1, 1e-12, 'sum of f=−1 is minus the area');
+  const oneBar = barPartial(() => 1, 0, 2, 4, 'left', 4);
+  approx(oneBar.sum, riemann1d(() => 1, 0, 2, { n: 4, sample: 'left' }).sum, 1e-12, '1D partial sum matches riemann1d');
+
+  const pc = polarCell(1, 4, 8, 8, 'mid');
+  approx(pc.r0, 0.25, 1e-12, 'polar ring 1 starts at Δr');
+  approx(pc.dA, pc.r * pc.dr * pc.dth, 1e-12, 'polar cell area is r Δr Δθ');
+  approx(polarArea(pc.r, pc.dr, pc.dth, { jacobian: false }), pc.bare, 1e-12, 'dropped r is Δr Δθ');
+  const fullPol = polarPartial(() => 1, 1, 12, 24, 'mid', 12 * 24, { jacobian: true });
+  approx(fullPol.sum, rpol.sum, 1e-12, 'polar partial of every cell matches riemannPolar');
+  approx(polarPartial(() => 1, 1, 4, 8, 'mid', 32, { jacobian: false }).sum, 2 * Math.PI, 1e-12, 'Riemann without r is 2πR');
+  approx(integralPolar(() => 1, 0, 1, 0, 2 * Math.PI, { n: 80, jacobian: false }), 2 * Math.PI, 1e-3, '∫∫ dr dθ on the unit disk is 2π');
+
+  const corners = polarRectCorners({ r: 1, th: 0, dr: 0.2, tang: 0.5 });
+  approx(corners[2].x, 1.1, 1e-12, 'forgotten-r rectangle, θ=0, outer corner x');
+  approx(corners[2].y, 0.25, 1e-12, 'forgotten-r rectangle, θ=0, θ-hat is +y');
+  const up = polMath(1, Math.PI / 2, 2);
+  approx(up.x, 0, 1e-12, 'θ=π/2 is +y, x');
+  approx(up.y, 1, 1e-12, 'θ=π/2 is +y, y');
+  approx(up.z, 2, 1e-12, 'polMath keeps z');
 }
 
 console.log('R³: polarization and parallelogram');
@@ -483,6 +526,44 @@ console.log('triple integrals');
   absApprox(integralSph(zf, 1, { n: 24 }), 0, 2e-3, 'sph Simpson z ≈ 0');
   const bowl = (x, y, z) => x * x + y * y + z * z;
   approx(integralSph(bowl, 1, { n: 24 }), (4 / 5) * Math.PI, 3e-3, 'sph Simpson ρ²');
+  approx(integralCyl(one, 1, 0, 1, { n: 24, jacobian: false }), 2 * Math.PI, 2e-3, 'cyl without r is 2πRH');
+  approx(integralSph(one, 1, { n: 32, sinPhi: false }), (2 * Math.PI * Math.PI) / 3, 2e-3, 'sph without sinφ is 2π²R³/3');
+
+  const bc = boxCell(0, 1, 0, 1, 0, 1, 2, 0);
+  approx(bc.x, 0.25, 1e-12, 'box cell 0 centre x');
+  approx(bc.dV, 0.125, 1e-12, 'box cell volume');
+  approx(boxPartial(() => 1, 0, 1, 0, 1, 0, 1, 2, 8).sum, 1, 1e-12, 'every unit-cube cell sums to 1');
+
+  const pole = sphMath(2, 0, 0);
+  approx(pole.x, 0, 1e-12, 'φ=0 is on the z-axis, x');
+  approx(pole.z, 2, 1e-12, 'φ=0 is +z');
+  const eq = sphMath(2, Math.PI / 2, 0);
+  approx(eq.x, 2, 1e-12, 'φ=π/2, θ=0 is +x');
+  approx(eq.z, 0, 1e-12, 'equator has z=0');
+  const eqy = sphMath(2, Math.PI / 2, Math.PI / 2);
+  approx(eqy.y, 2, 1e-12, 'φ=π/2, θ=π/2 is +y');
+  const rho = 0.7;
+  const phiP = 0.35;
+  const dRho = 0.2;
+  const dPhi = 0.3;
+  const dTh = 0.4;
+  approx(sphVolume(rho, Math.PI / 2, dRho, dPhi, dTh), rho * rho * dRho * dPhi * dTh, 1e-12, 'equator cell uses sinφ=1');
+  approx(
+    sphVolume(rho, phiP, dRho, dPhi, dTh),
+    rho * rho * Math.sin(phiP) * dRho * dPhi * dTh,
+    1e-12,
+    'pole cell uses sinφ',
+  );
+  approx(sphVolume(rho, phiP, dRho, dPhi, dTh, { sinPhi: false }), rho * rho * dRho * dPhi * dTh, 1e-12, 'dropped sinφ ignores φ');
+
+  setFrame({ upm: 2, plane: 'xyfloor' });
+  const w = mathToWorld(eq.x, eq.y, eq.z, 2);
+  approx(w.x, 4, 1e-12, 'equator point, world x');
+  approx(w.y, 0, 1e-12, 'equator point sits on the floor');
+  approx(w.z, 0, 1e-12, 'equator point, world depth');
+  const wz = mathToWorld(pole.x, pole.y, pole.z, 2);
+  approx(wz.y, 4, 1e-12, '+z in math is up in the scene');
+  setFrame({ upm: 1, plane: 'xyfloor' });
 }
 
 {

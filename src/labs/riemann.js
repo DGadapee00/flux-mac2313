@@ -6,9 +6,12 @@ import { riemannRect } from '../math/riemann.js';
 import { closedRect } from '../math/double.js';
 import { agreeTo } from '../math/agree.js';
 import { integral2 } from '../math/quadrature.js';
+import { rectCell, rectPartial, range2 } from '../math/terms.js';
 import { RIEMANN_MAX_N } from '../scene/riemann.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { ensureAnim, shownCount, tickReveal, onTermAction, playControls, bindPlay, syncPlayButton, plain, showAll } from './reveal.js';
+import { clickPicker } from './pick.js';
 
 /*
  * The yardstick is the integral of |f| over the same region — not the value of the integral, which
@@ -17,16 +20,21 @@ import { fmtNum as fmt } from '../ui/format.js';
  */
 const agree = (a, b, scale) => agreeTo(a, b, scale, { tol: 0.03 });
 
+const totalOf = (state) => {
+  const n = Math.max(2, Math.min(RIEMANN_MAX_N, state.n | 0));
+  return n * n;
+};
+
 export default defineLab({
   id: 'riemann',
   exam: 'ch3',
   title: 'Riemann',
-  hint: 'Drag $n$ · boxes are a Riemann sum',
+  hint: 'Click a cell · play adds one term at a time',
   orbit: true,
   probe: false,
   frame: true,
   camera: { pos: new THREE.Vector3(8.4, 7.2, 9.6), target: new THREE.Vector3(0.6, 0.5, 0.6) },
-  keys: { r: 'reset', R: 'reset' },
+  keys: { r: 'reset', R: 'reset', ' ': 'sweep', ArrowRight: 'next', ArrowLeft: 'prev' },
   toggles: [
     { key: 'surface', label: 'Surface' },
     { key: 'boxes', label: 'Boxes' },
@@ -40,6 +48,8 @@ export default defineLab({
       params: { a: 1, b: 1, c: 0 },
       n: 4,
       sample: 'mid',
+      cell: 0,
+      anim: { playing: false, i: 1e9, t: 0 },
       probe: { x: 0.5, y: 0.5, z: 0 },
       xMin: 0,
       xMax: 1,
@@ -66,6 +76,7 @@ export default defineLab({
             <option value="ur">Upper right</option>
           </select>
         </label>
+        ${playControls('rm')}
       </div>`;
   },
   bind(api) {
@@ -77,6 +88,7 @@ export default defineLab({
       api.slice().sample = e.target.value;
       api.bump();
     });
+    bindPlay('rm', api, totalOf);
   },
   syncControls(state) {
     const nEl = document.getElementById('rm-n');
@@ -85,11 +97,14 @@ export default defineLab({
     document.getElementById('rm-n-val').textContent = String(state.n);
     const sel = document.getElementById('rm-sample');
     if (sel) sel.value = state.sample;
+    syncPlayButton('rm', state);
   },
   applyScenario(id, state) {
     applyData('riemann', id, state);
     if (!state.n) state.n = 4;
     if (!state.sample) state.sample = 'mid';
+    state.cell = 0;
+    showAll(state);
   },
   extent(state) {
     return Math.max(
@@ -100,7 +115,26 @@ export default defineLab({
       1,
     );
   },
+  onAction(action, state) {
+    return onTermAction(action, state, totalOf(state));
+  },
+  pointer: clickPicker((state, m, bump) => {
+    const n = Math.max(2, Math.min(RIEMANN_MAX_N, state.n | 0));
+    const dx = (state.xMax - state.xMin) / n;
+    const dy = (state.yMax - state.yMin) / n;
+    if (dx === 0 || dy === 0) return;
+    const i = Math.floor((m.x - state.xMin) / dx);
+    const j = Math.floor((m.y - state.yMin) / dy);
+    if (i < 0 || j < 0 || i >= n || j >= n) return;
+    state.cell = i * n + j;
+    showAll(state);
+    bump();
+  }),
+  tick(dt, state) {
+    return tickReveal(dt, state, totalOf(state), 0.07);
+  },
   recompute(state, computed) {
+    ensureAnim(state);
     const n = Math.max(2, Math.min(RIEMANN_MAX_N, state.n | 0));
     state.n = n;
     const sample = state.sample === 'll' || state.sample === 'ur' ? state.sample : 'mid';
@@ -117,9 +151,19 @@ export default defineLab({
     const Iabs = integral2((x, y) => Math.abs(fn(x, y)), xa, xb, ya, yb, { order: 'xy', n: 64 });
     const closed = closedRect(surf.id, xa, xb, ya, yb, p);
     const truth = Number.isFinite(closed) ? closed : simp;
+    const total = n * n;
+    state.cell = ((state.cell | 0) % total + total) % total;
+    const shown = shownCount(state, total);
+    const cell = rectCell(xa, xb, ya, yb, n, n, Math.min(state.cell, Math.max(0, shown - 1)), sample);
+    const running = rectPartial(fn, xa, xb, ya, yb, n, n, sample, shown);
+    const fv = fn(cell.x, cell.y);
+    const scale = range2(fn, xa, xb, ya, yb, 8);
     computed.surf = surf;
     computed.tex = surf.tex(p);
     computed.sum = mid.sum;
+    computed.running = running.sum;
+    computed.shown = shown;
+    computed.total = total;
     computed.simp = simp;
     computed.closed = closed;
     computed.dx = mid.dx;
@@ -127,15 +171,22 @@ export default defineLab({
     computed.dA = mid.dA;
     computed.n = n;
     computed.sample = sample;
+    computed.cell = cell;
+    computed.term = { ...cell, f: fv, value: fv * cell.dA };
     computed.err = Math.abs(mid.sum - truth);
     computed.Iabs = Iabs;
     computed.agree = agree(mid.sum, truth, Iabs);
+    computed.truth = truth;
+    computed.flo = scale.lo;
+    computed.fhi = scale.hi;
+    computed.flat = scale.flat;
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};
     const surf = computed.surf;
     const p = state.params;
     const f = (x, y) => surf.f(x, y, p);
+    const term = computed.term;
     ctx.pool.surface().setVisible(true);
     ctx.pool.surface().sync({
       f,
@@ -143,8 +194,8 @@ export default defineLab({
       xMax: state.xMax,
       yMin: state.yMin,
       yMax: state.yMax,
-      probe: { x: 0.5 * (state.xMin + state.xMax), y: 0.5 * (state.yMin + state.yMax) },
-      fP: surf.f(0.5 * (state.xMin + state.xMax), 0.5 * (state.yMin + state.yMax), p),
+      probe: { x: term.x, y: term.y },
+      fP: term.f,
       show: show.surface !== false,
       stem: false,
     });
@@ -159,45 +210,69 @@ export default defineLab({
       nx: state.n,
       ny: state.n,
       sample: state.sample,
+      reveal: computed.shown,
+      select: term.index,
+      lo: computed.flo,
+      hi: computed.fhi,
       show: !!show.boxes,
     });
   },
-  law() {
-    return ['\\displaystyle\\iint_D f\\,dA = \\lim \\sum f(x_{ij}^*, y_{ij}^*)\\,\\Delta A_{ij}'];
+  law(state, computed) {
+    const t = computed.term;
+    if (!t) return ['\\displaystyle\\iint_D f\\,dA = \\lim \\sum f(x_{ij}^*, y_{ij}^*)\\,\\Delta A_{ij}'];
+    return [
+      `f(${fmt(t.x)}, ${fmt(t.y)})\\,\\Delta A = ${fmt(t.value)}`,
+      '\\displaystyle\\iint_D f\\,dA = \\lim_{n\\to\\infty}\\sum f(x_{ij}^*, y_{ij}^*)\\,\\Delta x\\,\\Delta y',
+    ];
   },
   liveRows(state, computed) {
+    const t = computed.term;
     const sample =
       computed.sample === 'll' ? 'lower left' : computed.sample === 'ur' ? 'upper right' : 'midpoint';
     const closed = Number.isFinite(computed.closed) ? `$${fmt(computed.closed)}$` : 'no closed form';
+    const partial = computed.shown < computed.total;
     return (
-      kv('$f$', `$${computed.tex}$`) +
-      kv('$D$', `$[${fmt(state.xMin)}, ${fmt(state.xMax)}]\\times[${fmt(state.yMin)}, ${fmt(state.yMax)}]$`) +
-      kv('$n\\times n$', `$${computed.n}\\times ${computed.n}$`) +
-      kv('$\\Delta x,\\ \\Delta y$', `$${fmt(computed.dx)},\\ ${fmt(computed.dy)}$`) +
-      kv('sample', sample) +
-      kv('Riemann sum', `$${fmt(computed.sum)}$`) +
+      kv('cell', `$(i, j) = (${t.i + 1}, ${t.j + 1})$`) +
+      kv('sample $(x^*, y^*)$', `$(${fmt(t.x)}, ${fmt(t.y)})$`) +
+      kv('$f(x^*, y^*)$', `$${fmt(t.f)}$`) +
+      kv('$\\Delta x\\,\\Delta y$', `$${fmt(t.dx)}\\cdot ${fmt(t.dy)} = ${fmt(t.dA)}$`) +
+      kv('this term', `$${fmt(t.value)}$`) +
+      kv(partial ? 'sum so far' : 'Riemann sum', `$${fmt(partial ? computed.running : computed.sum)}$`) +
       kv('Simpson $\\iint$', `$${fmt(computed.simp)}$`) +
-      kv('closed form', closed)
+      kv('closed form', closed) +
+      kv('sample rule', sample)
     );
   },
   readout(state, computed) {
+    const partial = computed.shown < computed.total;
     return cells([
-      ['sum', `$${fmt(computed.sum)}$`],
-      ['$\\iint$', `$${fmt(Number.isFinite(computed.closed) ? computed.closed : computed.simp)}$`],
-      ['$|\\mathrm{err}|$', `$${fmt(computed.err)}$`],
-      ['routes agree', computed.agree ? 'yes' : 'raise $n$'],
+      ['this term', `$${fmt(computed.term.value)}$`],
+      [partial ? 'so far' : 'sum', `$${fmt(partial ? computed.running : computed.sum)}$`],
+      ['$\\iint$', `$${fmt(computed.truth)}$`],
+      ['cell', `$${computed.term.i + 1}, ${computed.term.j + 1}$`],
     ]);
   },
+  legendLabels(state, computed) {
+    if (computed.flat) return { low: `f = ${plain(computed.flo)}`, high: `f = ${plain(computed.fhi)}` };
+    return { low: plain(computed.flo), high: plain(computed.fhi) };
+  },
   coach(state, computed) {
+    const t = computed.term;
     const body = [];
+    const sign =
+      t.f < -1e-8
+        ? 'This term is negative, so the box hangs below the plane and subtracts from the sum.'
+        : 'The box height is $f$ at the white sample point. The gold rectangle on the floor is the true base $\\Delta x$ by $\\Delta y$, not the gap between boxes.';
     body.push(
-      'The double integral over a rectangle is the limit of these box volumes. Each box has base $\\Delta x\\,\\Delta y$ and height $f$ at a sample point $(x_{ij}^*, y_{ij}^*)$ in the cell. Midpoint is one legal choice; the corners are legal too.',
+      `Cell $(${t.i + 1}, ${t.j + 1})$ contributes $${fmt(t.value)}$. ${sign}`,
     );
-    body.push(eq('\\iint_D f\\,dA = \\lim_{n\\to\\infty}\\sum_{i,j} f(x_{ij}^*, y_{ij}^*)\\,\\Delta x\\,\\Delta y'));
+    body.push(eq('f(x^*, y^*)\\,\\Delta x\\,\\Delta y'));
     body.push(
-      `A second route is a Simpson iterated integral${Number.isFinite(computed.closed) ? ', and a third is a closed antiderivative' : ''}. At $n=${computed.n}$ the boxes ${computed.agree ? 'already match the integral' : 'are still a coarse partition — raise $n$ to watch the error drop'}.`,
+      computed.shown < computed.total
+        ? `Play has added ${computed.shown} of ${computed.total} terms. The sum so far is $${fmt(computed.running)}$.`
+        : `All $${computed.total}$ terms are in. At $n=${computed.n}$ they ${computed.agree ? 'already match the integral' : 'are still a coarse partition — raise $n$'}.`,
     );
-    return { title: 'Double Riemann sums', body };
+    return { title: 'One term of the double sum', body };
   },
   plot: () => null,
 });

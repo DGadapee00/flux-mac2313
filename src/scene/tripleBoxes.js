@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { sceneScale, mathToWorld } from '../engine/frame.js';
-import { rampColor, M } from './manim.js';
-import { fatSegments, setFatSegments, segmentCapacity } from './manim.js';
+import { M, fatSegments, setFatSegments, segmentCapacity } from './manim.js';
+import { paintValue, setTriangles } from './paint.js';
 
 export const TRIPLE_MAX_N = 8;
 const MAX = TRIPLE_MAX_N * TRIPLE_MAX_N * TRIPLE_MAX_N;
@@ -32,17 +32,31 @@ export class TripleBoxesView {
     this.mesh.count = 0;
     this.group.add(this.mesh);
     this.outline = fatSegments(segmentCapacity(12), { color: M.yellow, width: 1.8, opacity: 0.75 });
-    this.group.add(this.outline);
+    this.cage = fatSegments(segmentCapacity(12), { color: M.white, width: 2.6, opacity: 1 });
+    this.group.add(this.outline, this.cage);
+    this.plane = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshBasicMaterial({
+        color: M.gold,
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    this.plane.frustumCulled = false;
+    this.group.add(this.plane);
   }
 
   setVisible(v) {
     this.group.visible = v;
   }
 
-  sync({ f, xMin, xMax, yMin, yMax, zMin, zMax, n, show = true }) {
+  sync({ f, xMin, xMax, yMin, yMax, zMin, zMax, n, show = true, select = null, lo: scaleLo, hi: scaleHi, sweep = null }) {
     this.group.visible = !!show;
     if (!show) {
       this.mesh.count = 0;
+      this.plane.visible = false;
       return;
     }
     const u = sceneScale();
@@ -57,8 +71,8 @@ export class TripleBoxesView {
     const sx = GAP * Math.hypot(ax.x - c0.x, ax.y - c0.y, ax.z - c0.z);
     const sy = GAP * Math.hypot(az.x - c0.x, az.y - c0.y, az.z - c0.z);
     const sz = GAP * Math.hypot(ay.x - c0.x, ay.y - c0.y, ay.z - c0.z);
-    let lo = Infinity;
-    let hi = -Infinity;
+    let autoLo = Infinity;
+    let autoHi = -Infinity;
     const vals = [];
     for (let i = 0; i < nX; i++) {
       const x = xMin + (i + 0.5) * dx;
@@ -68,13 +82,16 @@ export class TripleBoxesView {
           const z = zMin + (k + 0.5) * dz;
           const h = f(x, y, z);
           const val = Number.isFinite(h) ? h : 0;
-          vals.push({ x, y, z, val });
-          if (val < lo) lo = val;
-          if (val > hi) hi = val;
+          vals.push({ i, j, k, x, y, z, val });
+          if (val < autoLo) autoLo = val;
+          if (val > autoHi) autoHi = val;
         }
       }
     }
-    const span = Math.max(1e-9, hi - lo);
+    const cLo = Number.isFinite(scaleLo) ? scaleLo : autoLo;
+    const cHi = Number.isFinite(scaleHi) ? scaleHi : autoHi;
+    const axis = sweep?.axis;
+    const at = sweep?.at;
     let nInst = 0;
     for (const cell of vals) {
       const w = mathToWorld(cell.x, cell.y, cell.z, u);
@@ -83,7 +100,10 @@ export class TripleBoxesView {
       _q.identity();
       _m.compose(_p, _q, _s);
       this.mesh.setMatrixAt(nInst, _m);
-      rampColor((cell.val - lo) / span, _c);
+      paintValue(cell.val, cLo, cHi, _c);
+      const coord = axis === 'z' ? cell.z : axis === 'y' ? cell.y : cell.x;
+      const step = axis === 'z' ? dz : axis === 'y' ? dy : dx;
+      if (axis && Number.isFinite(at) && coord > at + 0.5 * step) _c.multiplyScalar(0.28);
       this.mesh.setColorAt(nInst, _c);
       nInst += 1;
     }
@@ -115,6 +135,65 @@ export class TripleBoxesView {
       ...e(1, 5),
       ...e(2, 6),
       ...e(3, 7),
+    ]);
+
+    const sel = select == null ? -1 : select | 0;
+    if (sel >= 0 && sel < vals.length) {
+      const cell = vals[sel];
+      const x0 = cell.x - 0.5 * dx;
+      const y0 = cell.y - 0.5 * dy;
+      const z0 = cell.z - 0.5 * dz;
+      const cage = [
+        [x0, y0, z0],
+        [x0 + dx, y0, z0],
+        [x0 + dx, y0 + dy, z0],
+        [x0, y0 + dy, z0],
+        [x0, y0, z0 + dz],
+        [x0 + dx, y0, z0 + dz],
+        [x0 + dx, y0 + dy, z0 + dz],
+        [x0, y0 + dy, z0 + dz],
+      ].map(([x, y, z]) => mathToWorld(x, y, z, u));
+      const g = (i, j) => [cage[i].x, cage[i].y, cage[i].z, cage[j].x, cage[j].y, cage[j].z];
+      setFatSegments(this.cage, [
+        ...g(0, 1), ...g(1, 2), ...g(2, 3), ...g(3, 0),
+        ...g(4, 5), ...g(5, 6), ...g(6, 7), ...g(7, 4),
+        ...g(0, 4), ...g(1, 5), ...g(2, 6), ...g(3, 7),
+      ]);
+    } else {
+      setFatSegments(this.cage, []);
+    }
+
+    if (!axis || !Number.isFinite(at)) {
+      this.plane.visible = false;
+      return;
+    }
+    let quad;
+    if (axis === 'z') {
+      quad = [
+        [xMin, yMin, at],
+        [xMax, yMin, at],
+        [xMax, yMax, at],
+        [xMin, yMax, at],
+      ];
+    } else if (axis === 'y') {
+      quad = [
+        [xMin, at, zMin],
+        [xMax, at, zMin],
+        [xMax, at, zMax],
+        [xMin, at, zMax],
+      ];
+    } else {
+      quad = [
+        [at, yMin, zMin],
+        [at, yMax, zMin],
+        [at, yMax, zMax],
+        [at, yMin, zMax],
+      ];
+    }
+    const q = quad.map(([x, y, z]) => mathToWorld(x, y, z, u));
+    setTriangles(this.plane, [
+      q[0].x, q[0].y, q[0].z, q[1].x, q[1].y, q[1].z, q[2].x, q[2].y, q[2].z,
+      q[0].x, q[0].y, q[0].z, q[2].x, q[2].y, q[2].z, q[3].x, q[3].y, q[3].z,
     ]);
   }
 }

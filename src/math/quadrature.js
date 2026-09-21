@@ -66,9 +66,11 @@ export function integral2(f, xa, xb, ya, yb, { order = 'xy', n = 64 } = {}) {
 
 /**
  * ∫_{θ=t0}^{t1} ∫_{r=r0}^{r1} f(r,θ) r dr dθ — the Jacobian is included here, not by the caller.
+ * `jacobian: false` drops the r, which is the mistake the polar lab draws.
  */
-export function integralPolar(f, r0, r1, t0, t1, { n = 64 } = {}) {
-  return integral2((r, th) => f(r, th) * r, r0, r1, t0, t1, { order: 'xy', n });
+export function integralPolar(f, r0, r1, t0, t1, { n = 64, jacobian = true } = {}) {
+  const w = jacobian ? (r) => r : () => 1;
+  return integral2((r, th) => f(r, th) * w(r), r0, r1, t0, t1, { order: 'xy', n });
 }
 
 /**
@@ -117,9 +119,11 @@ export function integral3(f, xa, xb, ya, yb, za, zb, { order = 'xyz', n = 16 } =
 
 /**
  * ∭ f r dr dθ dz over r∈[0,R], θ∈[0,2π), z∈[z0,z1]. Jacobian r is included here.
+ * `jacobian: false` drops the r.
  */
-export function integralCyl(f, R, z0, z1, { n = 24 } = {}) {
-  const g = (r, th, z) => f(r * Math.cos(th), r * Math.sin(th), z) * r;
+export function integralCyl(f, R, z0, z1, { n = 24, jacobian = true } = {}) {
+  const w = jacobian ? (r) => r : () => 1;
+  const g = (r, th, z) => f(r * Math.cos(th), r * Math.sin(th), z) * w(r);
   const inner = (z) => {
     const mid = (th) => compositeSimpson((r) => g(r, th, z), 0, R, n);
     return compositeSimpson(mid, 0, 2 * Math.PI, n);
@@ -144,15 +148,16 @@ export function integralCylCart(f, R, z0, z1, { n = 24 } = {}) {
 /**
  * ∭ f ρ² sinφ dρ dφ dθ over ρ∈[0,R], φ∈[0,π], θ∈[0,2π). Jacobian included here.
  * φ is the angle from the positive z-axis.
+ * `sinPhi: false` keeps ρ² and drops sinφ — the mistake the spherical lab draws.
  */
-export function integralSph(f, R, { n = 24 } = {}) {
+export function integralSph(f, R, { n = 24, sinPhi = true } = {}) {
   const g = (rho, phi, th) => {
     const s = Math.sin(phi);
     const c = Math.cos(phi);
     const x = rho * s * Math.cos(th);
     const y = rho * s * Math.sin(th);
     const z = rho * c;
-    return f(x, y, z) * rho * rho * s;
+    return f(x, y, z) * rho * rho * (sinPhi ? s : 1);
   };
   const inner = (th) => {
     const mid = (phi) => compositeSimpson((rho) => g(rho, phi, th), 0, R, n);

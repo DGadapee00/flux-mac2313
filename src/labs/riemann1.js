@@ -5,9 +5,12 @@ import { graphById, graphPolyline, graphSpeed } from '../math/graphs1.js';
 import { agreeTo } from '../math/agree.js';
 import { riemann1d } from '../math/riemann.js';
 import { simpson } from '../math/quadrature.js';
+import { barCell, barPartial, range1 } from '../math/terms.js';
 import { GRAPH_BARS_MAX_N } from '../scene/graphBars.js';
 import { kv, cells, eq } from '../ui/shared.js';
 import { fmtNum as fmt } from '../ui/format.js';
+import { ensureAnim, shownCount, tickReveal, onTermAction, playControls, bindPlay, syncPlayButton, plain, showAll } from './reveal.js';
+import { clickPicker } from './pick.js';
 
 /*
  * The yardstick is the integral of |f| over the same interval — not the value of the integral,
@@ -24,17 +27,18 @@ export default defineLab({
   id: 'riemann1',
   exam: 'ch1',
   title: 'Riemann',
-  hint: 'Drag $n$ · left / mid / right vs FTC',
+  hint: 'Click a rectangle · play adds one term at a time',
   orbit: true,
   probe: false,
   frame: true,
   cameraFor: planeCamera,
   camera: { pos: new THREE.Vector3(0, 0, 14), target: new THREE.Vector3(0, 0, 0) },
-  keys: { r: 'reset', R: 'reset' },
+  keys: { r: 'reset', R: 'reset', ' ': 'sweep', ArrowRight: 'next', ArrowLeft: 'prev' },
   toggles: [
     { key: 'curve', label: 'Graph' },
     { key: 'bars', label: 'Rectangles' },
   ],
+  legend: { id: 'f', title: '$f(x)$', low: 'low', high: 'high' },
   scenarios: SCENARIOS.riemann1,
   defaultState() {
     return {
@@ -44,6 +48,8 @@ export default defineLab({
       b: 1,
       n: 6,
       sample: 'mid',
+      cell: 0,
+      anim: { playing: false, i: 1e9, t: 0 },
       probe: { x: 0.5, y: 0.25, z: 0 },
       xMin: -0.2,
       xMax: 1.2,
@@ -71,6 +77,7 @@ export default defineLab({
             <option value="right">Right</option>
           </select>
         </label>
+        ${playControls('r1')}
       </div>`;
   },
   bind(api) {
@@ -82,6 +89,7 @@ export default defineLab({
       api.slice().sample = e.target.value;
       api.bump();
     });
+    bindPlay('r1', api, (s) => Math.max(2, Math.min(GRAPH_BARS_MAX_N, s.n | 0)));
   },
   syncControls(state) {
     const nEl = document.getElementById('r1-n');
@@ -90,12 +98,15 @@ export default defineLab({
     document.getElementById('r1-n-val').textContent = String(state.n);
     const sel = document.getElementById('r1-sample');
     if (sel) sel.value = state.sample;
+    syncPlayButton('r1', state);
   },
   applyScenario(id, state) {
     applyData('riemann1', id, state);
     keepXy(state);
     if (!state.n) state.n = 6;
     if (!state.sample) state.sample = 'mid';
+    state.cell = 0;
+    showAll(state);
   },
   extent(state) {
     const g = graphById(state.graphId);
@@ -108,8 +119,29 @@ export default defineLab({
     }
     return m;
   },
+  onAction(action, state) {
+    const n = Math.max(2, Math.min(GRAPH_BARS_MAX_N, state.n | 0));
+    return onTermAction(action, state, n);
+  },
+  pointer: clickPicker((state, m, bump) => {
+    const n = Math.max(2, Math.min(GRAPH_BARS_MAX_N, state.n | 0));
+    const a = Number.isFinite(state.a) ? state.a : 0;
+    const b = Number.isFinite(state.b) ? state.b : 1;
+    const dx = (b - a) / n;
+    if (dx === 0) return;
+    const i = Math.floor((m.x - a) / dx);
+    if (i < 0 || i >= n) return;
+    state.cell = i;
+    showAll(state);
+    bump();
+  }),
+  tick(dt, state) {
+    const n = Math.max(2, Math.min(GRAPH_BARS_MAX_N, state.n | 0));
+    return tickReveal(dt, state, n, 0.08);
+  },
   recompute(state, computed) {
     keepXy(state);
+    ensureAnim(state);
     const g = graphById(state.graphId);
     const a = Number.isFinite(state.a) ? state.a : 0;
     const b = Number.isFinite(state.b) ? state.b : 1;
@@ -153,6 +185,20 @@ export default defineLab({
     computed.agree = agree(chosen.sum, truth, Iabs);
     computed.agreeL = agree(Lsimp, Lpoly, Math.abs(Lsimp));
     computed.truth = truth;
+    state.cell = ((state.cell | 0) % n + n) % n;
+    const shown = shownCount(state, n);
+    const cell = barCell(a, b, n, shown <= 0 ? 0 : Math.min(state.cell, shown - 1), sample);
+    const running = barPartial(g.f, a, b, n, sample, shown);
+    const fv = g.f(cell.x);
+    const scale = range1(g.f, a, b, 24);
+    computed.shown = shown;
+    computed.total = n;
+    computed.running = running.sum;
+    computed.cell = cell;
+    computed.term = { ...cell, f: fv, value: fv * cell.dx };
+    computed.flo = scale.lo;
+    computed.fhi = scale.hi;
+    computed.flat = scale.flat;
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};
@@ -176,50 +222,73 @@ export default defineLab({
       b: state.b,
       n: state.n,
       sample: state.sample,
+      reveal: computed.shown,
+      select: computed.term.index,
+      lo: computed.flo,
+      hi: computed.fhi,
       show: !!show.bars,
     });
     ctx.pool.probe().setVisible(false);
   },
-  law() {
+  law(state, computed) {
+    const t = computed.term;
+    if (!t) {
+      return [
+        '\\displaystyle\\int_a^b f(x)\\,dx = \\lim_{n\\to\\infty}\\sum f(x_i^*)\\,\\Delta x',
+        '= F(b)-F(a)',
+      ];
+    }
     return [
-      '\\displaystyle\\int_a^b f(x)\\,dx = \\lim_{n\\to\\infty}\\sum f(x_i^*)\\,\\Delta x',
-      '= F(b)-F(a)',
-      'L=\\displaystyle\\int_a^b\\sqrt{1+f\'(x)^2}\\,dx',
+      `f(${fmt(t.x)})\\,\\Delta x = ${fmt(t.f)}\\cdot ${fmt(t.dx)} = ${fmt(t.value)}`,
+      '\\displaystyle\\int_a^b f(x)\\,dx = \\lim_{n\\to\\infty}\\sum f(x_i^*)\\,\\Delta x = F(b)-F(a)',
     ];
   },
   liveRows(state, computed) {
+    const t = computed.term;
     const sample = computed.sample === 'left' ? 'left' : computed.sample === 'right' ? 'right' : 'midpoint';
     const closed = Number.isFinite(computed.Iclosed) ? `$${fmt(computed.Iclosed)}$` : 'no closed form';
+    const partial = computed.shown < computed.total;
     return (
-      kv('$f$', `$${computed.tex}$`) +
-      kv('$[a,b]$', `$[${fmt(state.a)}, ${fmt(state.b)}]$`) +
-      kv('$n$, $\\Delta x$', `$${computed.n}$, $${fmt(computed.dx)}$`) +
-      kv('sample', sample) +
+      kv('interval', `$${t.index + 1}$ of $${computed.total}$`) +
+      kv('sample $x^*$', `$${fmt(t.x)}$`) +
+      kv('$f(x^*)\\,\\Delta x$', `$${fmt(t.f)}\\cdot ${fmt(t.dx)} = ${fmt(t.value)}$`) +
+      kv(partial ? 'sum so far' : 'chosen sum', `$${fmt(partial ? computed.running : computed.sum)}$`) +
       kv('left / mid / right', `$${fmt(computed.left)}$ / $${fmt(computed.mid)}$ / $${fmt(computed.right)}$`) +
       kv('Simpson', `$${fmt(computed.Isimp)}$`) +
       kv('$F(b)-F(a)$', closed) +
-      kv('graph length (Simpson)', `$${fmt(computed.Lsimp)}$`) +
-      kv('graph length (polyline)', `$${fmt(computed.Lpoly)}$`)
+      kv('sample', sample) +
+      kv('graph length', `$${fmt(computed.Lsimp)}$ vs polyline $${fmt(computed.Lpoly)}$`)
     );
   },
   readout(state, computed) {
+    const t = computed.term;
+    const partial = computed.shown < computed.total;
     return cells([
-      ['sum', `$${fmt(computed.sum)}$`],
+      ['this term', `$${fmt(t.value)}$`],
+      [partial ? 'so far' : 'sum', `$${fmt(partial ? computed.running : computed.sum)}$`],
       ['$\\int$', `$${fmt(computed.truth)}$`],
-      ['$L$', `$${fmt(computed.Lsimp)}$`],
-      ['routes agree', computed.agree ? 'yes' : 'raise $n$'],
+      ['$x^*$', `$${fmt(t.x)}$`],
     ]);
   },
+  legendLabels(state, computed) {
+    if (computed.flat) return { low: `f = ${plain(computed.flo)}`, high: `f = ${plain(computed.fhi)}` };
+    return { low: plain(computed.flo), high: plain(computed.fhi) };
+  },
   coach(state, computed) {
+    const t = computed.term;
     const body = [];
+    const sign =
+      t.f < -1e-8
+        ? 'This sample is negative, so the rectangle hangs below the axis and subtracts.'
+        : 'The white dot is the sample point. The gold outline is the whole subinterval, and the rectangle’s height is $f$ there.';
+    body.push(`Term $${t.index + 1}$ is $${fmt(t.value)}$. ${sign}`);
+    body.push(eq('\\int_a^b f(x)\\,dx = \\lim_{n\\to\\infty}\\sum f(x_i^*)\\,\\Delta x = F(b)-F(a)'));
     body.push(
-      'A Riemann sum samples $f$ once in each subinterval — left endpoint, midpoint, or right endpoint are all legal. The integral is the limit; the FTC evaluates it as $F(b)-F(a)$ when an antiderivative is known. Simpson is an independent numeric route.',
+      computed.shown < computed.total
+        ? `Play has added ${computed.shown} of ${computed.total} rectangles. The sum so far is $${fmt(computed.running)}$.`
+        : `Graph length, $\\int_a^b\\sqrt{1+(f')^2}\\,dx$, is a different integral (${fmt(computed.Lsimp)} by Simpson). ${computed.agree ? 'At this $n$ the chosen sum matches the integral.' : 'Raise $n$ and the rectangles close in.'}`,
     );
-    body.push(eq('\\int_a^b f(x)\\,dx = \\lim_{n\\to\\infty}\\sum_{i=1}^n f(x_i^*)\\,\\Delta x = F(b)-F(a)'));
-    body.push(
-      `Graph length is a different integral, $\\int_a^b\\sqrt{1+f'(x)^2}\\,dx$, checked against a polyline. ${computed.g.id === 'semi' ? 'The upper unit semicircle has length $\\pi$ and area $\\pi/2$; the unit disk has area $\\pi$ and perimeter $2\\pi$.' : computed.agree ? 'At this $n$ the chosen sum already matches the integral.' : 'Raise $n$ to watch left, mid, and right close in.'}`,
-    );
-    return { title: 'One-variable Riemann sums', body };
+    return { title: 'One rectangle', body };
   },
   plot: () => null,
 });

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { defineLab } from './define.js';
 import { SCENARIOS, applyScenario as applyData } from '../data/scenarios.js';
 import { surfaceById } from '../math/surfaces.js';
-import { integral2, integralTypeI, integralTypeII, simpson } from '../math/quadrature.js';
+import { integral2, integralTypeI, integralTypeII, simpson, compositeSimpson } from '../math/quadrature.js';
 import { closedRect, closedDisk, closedTriangle, diskTypeI, diskTypeII, triangleBounds, parabolaBounds } from '../math/double.js';
 import { agreeTo } from '../math/agree.js';
 import { kv, cells, eq } from '../ui/shared.js';
@@ -46,7 +46,7 @@ export default defineLab({
   id: 'iterated',
   exam: 'ch3',
   title: 'Iterated',
-  hint: 'Slide the outer variable · Fubini swaps the order',
+  hint: 'The filled slice is the inner integral · the plot is $A$',
   orbit: true,
   probe: true,
   frame: true,
@@ -141,6 +141,10 @@ export default defineLab({
     applyData('iterated', id, state);
     if (!state.order) state.order = 'xy';
     if (!state.region) state.region = 'rect';
+    // f = 1 on a disk or triangle is a flat sheet over the bounding square, which hides the slice.
+    if (state.surfaceId === 'one' && state.region !== 'rect') {
+      state.show = { ...(state.show || {}), surface: false, slice: true, region: true };
+    }
   },
   extent(state) {
     const b = bounds(state);
@@ -228,6 +232,29 @@ export default defineLab({
     computed.Iabs = Iabs;
     computed.agree = agree(Ixy, Iyx, Iabs) && (!Number.isFinite(closed) || agree(Ixy, closed, Iabs));
     computed.truth = a;
+
+    const samples = 28;
+    const xs = [];
+    const ys = [];
+    const outerLo = order === 'yx' ? (b.ya ?? state.yMin) : (b.xa ?? state.xMin);
+    const outerHi = order === 'yx' ? (b.yb ?? state.yMax) : (b.xb ?? state.xMax);
+    for (let i = 0; i < samples; i++) {
+      const t = outerLo + ((outerHi - outerLo) * i) / (samples - 1);
+      let A = 0;
+      if (order === 'yx') {
+        const lo = b.xLo ? b.xLo(t) : state.xMin;
+        const hi = b.xHi ? b.xHi(t) : state.xMax;
+        A = hi > lo ? compositeSimpson((xx) => fn(xx, t), lo, hi, 8) : 0;
+      } else {
+        const lo = b.yLo ? b.yLo(t) : state.yMin;
+        const hi = b.yHi ? b.yHi(t) : state.yMax;
+        A = hi > lo ? compositeSimpson((yy) => fn(t, yy), lo, hi, 8) : 0;
+      }
+      xs.push(t);
+      ys.push(A);
+    }
+    computed.plotXs = xs;
+    computed.plotYs = ys;
   },
   syncViews(state, computed, ctx) {
     const show = state.show || {};
@@ -278,12 +305,47 @@ export default defineLab({
     });
     ctx.pool.probe().setVisible(true);
     ctx.pool.probe().sync(state.probe, computed.f, 'P');
+    ctx.pool.sliceArea().setVisible(!!show.slice);
+    ctx.pool.sliceArea().sync({
+      f,
+      order: computed.order,
+      x: state.probe.x,
+      y: state.probe.y,
+      xLo: computed.xLo,
+      xHi: computed.xHi,
+      yLo: computed.yLo,
+      yHi: computed.yHi,
+      xMin: state.xMin,
+      xMax: state.xMax,
+      yMin: state.yMin,
+      yMax: state.yMax,
+      show: !!show.slice,
+    });
   },
-  law(state) {
-    if (state?.order === 'yx') {
-      return ['\\displaystyle\\iint_D f\\,dA = \\int_{c}^{d}\\!\\int_{a}^{b} f\\,dx\\,dy'];
+  law(state, computed) {
+    const b = computed?.bounds;
+    const yx = state?.order === 'yx';
+    const R = b?.R;
+    let setup;
+    if (b?.kind === 'disk') {
+      const r = fmt(R);
+      setup = yx
+        ? `\\int_{-${r}}^{${r}}\\int_{-\\sqrt{${r}^{2}-y^{2}}}^{\\sqrt{${r}^{2}-y^{2}}} f\\,dx\\,dy`
+        : `\\int_{-${r}}^{${r}}\\int_{-\\sqrt{${r}^{2}-x^{2}}}^{\\sqrt{${r}^{2}-x^{2}}} f\\,dy\\,dx`;
+    } else if (state?.region === 'triangle') {
+      setup = yx ? '\\int_{0}^{1}\\int_{0}^{1-y} f\\,dx\\,dy' : '\\int_{0}^{1}\\int_{0}^{1-x} f\\,dy\\,dx';
+    } else if (state?.region === 'parabola') {
+      setup = '\\int_{-1}^{1}\\int_{0}^{1-x^{2}} f\\,dy\\,dx';
+    } else if (yx) {
+      setup = `\\int_{${fmt(b?.ya ?? state.yMin)}}^{${fmt(b?.yb ?? state.yMax)}}\\int_{${fmt(b?.xa ?? state.xMin)}}^{${fmt(b?.xb ?? state.xMax)}} f\\,dx\\,dy`;
+    } else {
+      setup = `\\int_{${fmt(b?.xa ?? state.xMin)}}^{${fmt(b?.xb ?? state.xMax)}}\\int_{${fmt(b?.ya ?? state.yMin)}}^{${fmt(b?.yb ?? state.yMax)}} f\\,dy\\,dx`;
     }
-    return ['\\displaystyle\\iint_D f\\,dA = \\int_{a}^{b}\\!\\int_{c}^{d} f\\,dy\\,dx'];
+    if (!computed) return [setup];
+    const slice = yx
+      ? `\\int_{${fmt(computed.xLo)}}^{${fmt(computed.xHi)}} f(x, ${fmt(state.probe.y)})\\,dx = ${fmt(computed.innerX)}`
+      : `\\int_{${fmt(computed.yLo)}}^{${fmt(computed.yHi)}} f(${fmt(state.probe.x)}, y)\\,dy = ${fmt(computed.innerY)}`;
+    return [slice, setup];
   },
   liveRows(state, computed) {
     const closed = Number.isFinite(computed.closed) ? `$${fmt(computed.closed)}$` : 'no closed form';
@@ -299,33 +361,44 @@ export default defineLab({
     );
   },
   readout(state, computed) {
+    const yx = computed.order === 'yx';
+    const inner = yx ? computed.innerX : computed.innerY;
     return cells([
+      [yx ? 'inner $dx$' : 'inner $dy$', `$${fmt(inner)}$`],
       ['$dy\\,dx$', `$${fmt(computed.Ixy)}$`],
       ['$dx\\,dy$', Number.isFinite(computed.Iyx) ? `$${fmt(computed.Iyx)}$` : '—'],
       ['closed', Number.isFinite(computed.closed) ? `$${fmt(computed.closed)}$` : '—'],
-      ['Fubini', computed.agree ? 'yes' : 'check $n$'],
     ]);
   },
   coach(state, computed) {
+    const yx = computed.order === 'yx';
+    const where = yx ? `$y = ${fmt(state.probe.y)}$` : `$x = ${fmt(state.probe.x)}$`;
+    const inner = yx ? computed.innerX : computed.innerY;
     const body = [];
-    if (computed.bounds.kind === 'rect') {
-      body.push(
-        'On a rectangle, hold $x$ fixed and integrate in $y$, then integrate that result in $x$. Theorem 21 (Fubini) says the other order — $x$ inner, then $y$ — gives the same number when $f$ is continuous.',
-      );
-    } else if (computed.bounds.kind === 'disk') {
-      body.push(
-        'The disk is a type I region: $x$ runs from $-R$ to $R$, and for each $x$ the inner $y$ runs between the two halves of $y=\\pm\\sqrt{R^2-x^2}$. Type II swaps the roles of $x$ and $y$. Both iterated integrals equal $\\iint_{D_R} f\\,dA$.',
-      );
-    } else {
-      body.push(
-        'On a type I region the inner limits are functions of $x$: $y$ runs from a lower curve to an upper curve. If a type II description exists, that is an independent route to the same integral.',
-      );
-    }
-    body.push(eq('\\iint_D f\\,dA = \\int_a^b\\int_{c}^{d} f\\,dy\\,dx = \\int_c^d\\int_{a}^{b} f\\,dx\\,dy'));
+    const region =
+      computed.bounds.kind === 'disk'
+        ? 'On the disk the inner limits are the two halves of the circle, so the gold strip changes length as you slide.'
+        : computed.bounds.kind === 'typeI'
+          ? 'On this region the inner limits are curves, so the strip runs from the lower curve to the upper curve.'
+          : 'On a rectangle the inner limits are constant.';
     body.push(
-      `The gold outline is $D$. The highlighted slice is the inner integral at the current outer variable. ${computed.agree ? 'The two orders agree.' : 'The two orders are still settling.'}`,
+      `The filled slice at ${where} is the inner integral, equal to $${fmt(inner)}$. ${inner < -1e-8 ? 'Blue is where $f$ is negative, so this strip subtracts.' : 'Gold is where $f$ is positive.'} ${region}`,
     );
-    return { title: 'Iterated integrals', body };
+    body.push(eq('\\iint_D f\\,dA = \\int A = \\int\\!\\left(\\int f\\right)'));
+    body.push(
+      `The plot is $A$, the inner integral as a function of the outer variable. The marker is this slice, and the gold fill up to the marker is how much of the outer integral you have accumulated. ${computed.agree ? 'Swapping the order gives the same $\\iint$.' : 'The two orders are still settling.'}`,
+    );
+    return { title: 'The inner integral is an area', body };
   },
-  plot: () => null,
+  plot(state, computed) {
+    if (!computed.plotXs) return null;
+    const yx = computed.order === 'yx';
+    return {
+      type: 'accum',
+      xs: computed.plotXs,
+      ys: computed.plotYs,
+      x: yx ? state.probe.y : state.probe.x,
+      title: yx ? 'A(y)' : 'A(x)',
+    };
+  },
 });

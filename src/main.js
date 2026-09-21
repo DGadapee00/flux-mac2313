@@ -161,8 +161,16 @@ function handleKey(e) {
   if (action === 'sweep') {
     e.preventDefault();
     toggleSweep();
+    return;
   }
-  if (action === 'reset') resetCamera();
+  if (action === 'reset') {
+    resetCamera();
+    return;
+  }
+  if (lab.onAction?.(action, slice())) {
+    e.preventDefault();
+    app.dirty = true;
+  }
 }
 
 function applyLabScenario(lab, id, s) {

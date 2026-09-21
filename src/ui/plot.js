@@ -111,6 +111,79 @@ export function drawVx(canvas, xs, Vs, probeX, pathAx) {
   ctx.fillText('V(x)', 14, 16);
 }
 
+/** Area under a sampled function, with the part up to probeX filled. */
+export function drawAccum(canvas, xs, ys, probeX, title) {
+  if (!canvas) return;
+  const { ctx, w, h } = setup(canvas);
+  if (!xs?.length || !ys?.length) return;
+  let vmin = Math.min(0, ...ys);
+  let vmax = Math.max(0, ...ys);
+  if (vmax - vmin < 1e-6) {
+    vmax += 1;
+    vmin -= 1;
+  }
+  const xmin = xs[0];
+  const xmax = xs[xs.length - 1];
+  const span = xmax - xmin || 1;
+  const xmap = (x) => ((x - xmin) / span) * (w - 24) + 12;
+  const ymap = (v) => h - 10 - ((v - vmin) / (vmax - vmin)) * (h - 22);
+  axes(ctx, w, h, ymap(0), 6);
+  const y0 = ymap(0);
+
+  const fillTo = (xStop, color) => {
+    const stop = Math.max(xmin, Math.min(xmax, xStop));
+    ctx.beginPath();
+    ctx.moveTo(xmap(xs[0]), y0);
+    let prevX = xs[0];
+    let prevY = ys[0];
+    ctx.lineTo(xmap(prevX), ymap(prevY));
+    for (let i = 1; i < xs.length; i++) {
+      if (xs[i] <= stop) {
+        ctx.lineTo(xmap(xs[i]), ymap(ys[i]));
+        prevX = xs[i];
+        prevY = ys[i];
+        continue;
+      }
+      const t = (stop - prevX) / (xs[i] - prevX || 1);
+      const y = prevY + (ys[i] - prevY) * t;
+      ctx.lineTo(xmap(stop), ymap(y));
+      break;
+    }
+    ctx.lineTo(xmap(stop), y0);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  fillTo(xmax, 'rgba(88,196,221,0.16)');
+  fillTo(probeX, 'rgba(240,172,95,0.5)');
+
+  ctx.strokeStyle = BLUE;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  for (let i = 0; i < xs.length; i++) {
+    const X = xmap(xs[i]);
+    const Y = ymap(ys[i]);
+    if (i === 0) ctx.moveTo(X, Y);
+    else ctx.lineTo(X, Y);
+  }
+  ctx.stroke();
+
+  const px = Math.max(xmin, Math.min(xmax, probeX));
+  let yi = ys[0];
+  for (let i = 1; i < xs.length; i++) {
+    if (xs[i] >= px) {
+      const t = (px - xs[i - 1]) / (xs[i] - xs[i - 1] || 1);
+      yi = ys[i - 1] + (ys[i] - ys[i - 1]) * t;
+      break;
+    }
+    yi = ys[i];
+  }
+  dot(ctx, xmap(px), ymap(yi), YELLOW);
+  ctx.fillStyle = WHITE;
+  ctx.font = SERIF;
+  ctx.fillText(title || 'A', 14, 16);
+}
+
 export function drawAC(canvas, pwr, t) {
   if (!canvas) return;
   const { ctx, w, h } = setup(canvas);

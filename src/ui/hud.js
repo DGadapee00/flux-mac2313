@@ -1,6 +1,6 @@
 import { EXAMS, examById, LAB_META } from '../data/catalog.js';
 import { setLawEl, prose, mathText } from './shared.js';
-import { drawVx, drawAC, drawVI, drawPaschen } from './plot.js';
+import { drawVx, drawAC, drawVI, drawPaschen, drawAccum } from './plot.js';
 import { sceneScale, workPlane, lenLabel, PLANE_AXES } from '../engine/frame.js';
 
 export function createHUD(api) {
@@ -269,6 +269,15 @@ export function createHUD(api) {
     $('eq-live').innerHTML = lab.liveRows(state, computed);
     $('readout').innerHTML = lab.readout(state, computed);
 
+    const legend = lab.legendLabels?.(state, computed);
+    if (legend) {
+      const spans = $('legend-host').querySelectorAll('.legend-row span');
+      if (spans.length >= 2) {
+        spans[0].textContent = legend.low;
+        spans[1].textContent = legend.high;
+      }
+    }
+
     const plot = lab.plot(state, computed);
     const canvas = $('mini-plot');
     if (!plot) {
@@ -279,6 +288,7 @@ export function createHUD(api) {
       if (plot.type === 'ac') drawAC(canvas, plot.power, plot.t);
       if (plot.type === 'vi') drawVI(canvas, plot);
       if (plot.type === 'paschen') drawPaschen(canvas, plot);
+      if (plot.type === 'accum') drawAccum(canvas, plot.xs, plot.ys, plot.x, plot.title);
     }
   }
 

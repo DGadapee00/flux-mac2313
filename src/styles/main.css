@@ -1006,6 +1006,11 @@ input[type='checkbox'] {
   color: var(--text);
 }
 
+.element-label {
+  font-size: 13px;
+  color: var(--yellow);
+}
+
 .axis-label {
   font-family: var(--math);
   font-style: italic;
